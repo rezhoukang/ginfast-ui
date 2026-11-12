@@ -36,12 +36,6 @@
 }
 
 // arco滚动条样式
-// 分离表头隐藏横向滚动条后，track 模式仍写入内联 padding-bottom。
-// 仅清除没有横向轨道的表头占位；保留表体及空数据时可用的表头轨道。
-.arco-scrollbar-type-track:has(> .arco-table-header):not(:has(> .arco-scrollbar-track-direction-horizontal)) {
-  padding-bottom: 0 !important;
-}
-
 // 横向
 .arco-scrollbar-thumb-direction-horizontal .arco-scrollbar-thumb-bar {
   height: 4px !important;

@@ -20,9 +20,9 @@ import '@arco-themes/vue-gi-demo/css/arco.css'; // 自定义主题
 import i18n from "@/lang/index";
 
 
-// 表格滚动条使用独立轨道，自动预留空间，避免遮挡末行内容。
+// 表格统一使用原生滚动条，避免自定义轨道在分离表头下预留空白。
 Object.assign(Table.props.scrollbar, {
-    default: () => ({ type: "track" })
+    default: false
 });
 
 const app = createApp(App);
