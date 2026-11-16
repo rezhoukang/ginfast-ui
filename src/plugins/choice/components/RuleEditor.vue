@@ -125,7 +125,6 @@ function move(i: number, delta: number) {
             ><a-radio value="all">全部满足（AND）</a-radio><a-radio value="any">任意满足（OR）</a-radio></a-radio-group
           ></a-form-item
         >
-        <a-alert>同一变量可以添加多个条件限定范围，例如 a &gt;= 2、a &lt;= 5、b &gt;= 1、b &lt;= 8，选择“全部满足”。</a-alert>
         <a-form-item label="条件"
           ><a-space direction="vertical" fill
             ><a-table :data="form.conditions" :pagination="false"
