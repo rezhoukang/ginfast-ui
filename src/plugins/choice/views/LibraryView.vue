@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
-import { archiveSet, listSets, type ChoiceSet } from "../api/choice";
+import { deleteSet, setEnabled, listSets, type ChoiceSet } from "../api/choice";
 import { describeError, useChoice } from "../workspace/context";
 import { useRouter } from "vue-router";
 import SetEditor from "../components/SetEditor.vue";
@@ -22,17 +22,33 @@ watch(
 function closeEditor() {
   if (view.value === "overview") void router.replace({ path: "/choice/sets" });
 }
-async function archive(id: number) {
+async function remove(id: number) {
   busy.value = true;
   error.value = "";
   try {
-    await archiveSet(id);
+    await deleteSet(id);
     if (state.current?.set.id === id) reset();
     await load();
   } catch (e) {
     error.value = describeError(e);
   } finally {
     busy.value = false;
+  }
+}
+const changingId = ref<number>();
+async function changeEnabled(record: ChoiceSet, enabled: boolean) {
+  if (changingId.value || state.busy || busy.value) return;
+  changingId.value = record.id;
+  error.value = "";
+  try {
+    const updated = await setEnabled(record.id, enabled);
+    record.enabled = updated.enabled;
+    // Status changes must not overwrite any locally edited definition/version.
+    if (state.current?.set.id === record.id) state.current.set.enabled = updated.enabled;
+  } catch (e) {
+    error.value = describeError(e);
+  } finally {
+    changingId.value = undefined;
   }
 }
 const sets = ref<ChoiceSet[]>([]);
@@ -58,9 +74,9 @@ onMounted(load);
 <template>
   <a-space direction="vertical" fill :size="16">
     <a-space wrap
-      ><a-button type="primary" :disabled="state.busy" @click="editor?.open()"
+      ><a-button type="primary" :disabled="state.busy || !!changingId" @click="editor?.open()"
         ><template #icon><icon-plus /></template>新建题集</a-button
-      ><a-button :loading="busy" @click="load">刷新</a-button></a-space
+      ><a-button :loading="busy" :disabled="!!changingId" @click="load">刷新</a-button></a-space
     >
     <a-alert v-if="error" type="error">{{ error }}</a-alert>
     <a-table
@@ -112,11 +128,31 @@ onMounted(load);
           align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
+          title="启用状态"
+          :width="120"
+        >
+          <template #cell="{ record }">
+            <a-switch
+              type="round"
+              :model-value="record.enabled"
+              :loading="changingId === record.id"
+              :disabled="busy || state.busy || !!changingId"
+              :aria-label="`${record.name}启用状态`"
+              checked-text="启用"
+              unchecked-text="停用"
+              @change="changeEnabled(record, $event as boolean)"
+            />
+          </template>
+        </a-table-column>
+        <a-table-column
+          align="center"
+          header-cell-class="choice-table-header"
+          :header-cell-style="{ textAlign: 'center' }"
           title="操作"
           :width="260"
           ><template #cell="{ record }"
             ><a-space wrap
-              ><a-button size="small" :disabled="state.busy" @click="editor?.open(record.id)">编辑</a-button
+              ><a-button size="small" :disabled="state.busy || !!changingId" @click="editor?.open(record.id)">编辑</a-button
               ><a-button
                 size="small"
                 type="primary"
@@ -124,8 +160,8 @@ onMounted(load);
                 @click="openSet(record.id, 'library')"
                 >{{ state.current?.set.id === record.id ? "已选择" : "选择" }}</a-button
               >
-              <a-popconfirm content="归档后停止新的作答，历史答卷保留。确认归档？" @ok="archive(record.id)">
-                <a-button size="small" status="danger" :disabled="busy || state.busy">归档</a-button>
+              <a-popconfirm content="删除后题集将从列表移除，历史版本和答卷保留。确认删除？" @ok="remove(record.id)">
+                <a-button size="small" status="danger" :disabled="busy || state.busy || !!changingId">删除</a-button>
               </a-popconfirm></a-space
             ></template
           ></a-table-column

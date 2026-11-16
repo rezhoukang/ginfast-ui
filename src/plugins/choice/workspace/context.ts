@@ -2,7 +2,7 @@ import { computed, inject, onBeforeUnmount, provide, reactive, watch, type Injec
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
 import { Message, Modal } from "@arco-design/web-vue";
 import { isAxiosError } from "axios";
-import { getSet, saveSet, publishSet, archiveSet, type Definition, type Detail } from "../api/choice";
+import { getSet, saveSet, publishSet, type Definition, type Detail } from "../api/choice";
 import { draftIssues, type DraftIssue } from "./readiness";
 import { choiceSelection } from "./selection";
 import { queryText, resolveView, workspaceKey, isChoicePath, viewPath, type ChoiceView } from "./navigation";
@@ -292,17 +292,6 @@ function createWorkspace() {
       Message.success("题集已发布");
     });
   }
-  async function archive() {
-    if (!state.current) return;
-    await run(async () => {
-      await archiveSet(state.current!.set.id);
-      state.baseline = JSON.stringify(state.draft);
-    });
-    if (!state.error) {
-      reset();
-      await navigate("library");
-    }
-  }
   return {
     state,
     acceptSaved,
@@ -320,7 +309,6 @@ function createWorkspace() {
     save,
     startPreview,
     publish,
-    archive,
     run
   };
 }

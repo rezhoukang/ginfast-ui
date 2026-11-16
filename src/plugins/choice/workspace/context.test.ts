@@ -8,8 +8,7 @@ import { choiceMenuLocked, choiceSelection } from "./selection";
 vi.mock("../api/choice", () => ({
   getSet: vi.fn(),
   saveSet: vi.fn(),
-  publishSet: vi.fn(),
-  archiveSet: vi.fn()
+  publishSet: vi.fn()
 }));
 vi.mock("@arco-design/web-vue", () => ({ Message: { success: vi.fn() }, Modal: { confirm: vi.fn() } }));
 // Match the host: every fullPath gets a fresh routed component instance.
@@ -86,7 +85,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.useFakeTimers();
   vi.mocked(saveSet).mockImplementation(async (id, version, definition) => ({
-    set: { id: id || 12, name: definition.name, currentVersionId: version + 1, publishedVersionId: 0 },
+    set: { id: id || 12, name: definition.name, currentVersionId: version + 1, publishedVersionId: 0, enabled: true },
     version: { id: version + 1, setId: id || 12, publishedAt: null, definition: JSON.parse(JSON.stringify(definition)) }
   }));
   vi.stubGlobal("window", { addEventListener: vi.fn(), removeEventListener: vi.fn() });
@@ -115,7 +114,7 @@ describe("Choice framework page navigation", () => {
     expect(router.currentRoute.value.path).toBe("/choice/sets");
     expect(selection.value).toBeUndefined();
     finish({
-      set: { id: 5, name: "已选择题集", currentVersionId: 9, publishedVersionId: 0 },
+      set: { id: 5, name: "已选择题集", currentVersionId: 9, publishedVersionId: 0, enabled: true },
       version: { id: 9, setId: 5, publishedAt: null, definition: blankDefinition() }
     });
     await flush();
@@ -136,7 +135,7 @@ describe("Choice framework page navigation", () => {
   it("refreshes the active set after list editing without replacing another set's draft", async () => {
     const definition = blankDefinition();
     const detail = {
-      set: { id: 5, name: definition.name, currentVersionId: 9, publishedVersionId: 0 },
+      set: { id: 5, name: definition.name, currentVersionId: 9, publishedVersionId: 0, enabled: true },
       version: { id: 9, setId: 5, publishedAt: null, definition }
     };
     vi.mocked(getSet).mockResolvedValue(detail);
@@ -188,7 +187,7 @@ describe("Choice framework page navigation", () => {
     completeDraft();
     const definition = JSON.parse(JSON.stringify(workspace.state.draft));
     vi.mocked(saveSet).mockResolvedValue({
-      set: { id: 12, name: definition.name, currentVersionId: 7, publishedVersionId: 0 },
+      set: { id: 12, name: definition.name, currentVersionId: 7, publishedVersionId: 0, enabled: true },
       version: { id: 7, setId: 12, publishedAt: null, definition }
     });
     await workspace.save();
@@ -211,7 +210,7 @@ describe("Choice framework page navigation", () => {
     workspace.state.draft!.questions[0].options[0].text = "独立编辑选项";
     const definition = JSON.parse(JSON.stringify(workspace.state.draft));
     vi.mocked(saveSet).mockResolvedValue({
-      set: { id: 12, name: definition.name, currentVersionId: 7, publishedVersionId: 0 },
+      set: { id: 12, name: definition.name, currentVersionId: 7, publishedVersionId: 0, enabled: true },
       version: { id: 7, setId: 12, publishedAt: null, definition }
     });
     await workspace.save();
@@ -246,7 +245,7 @@ describe("Choice framework page navigation", () => {
     await router.push("/choice/overview?set=6");
     expect(router.currentRoute.value.query.set).toBe("5");
     finish({
-      set: { id: 5, name: "链接题集", currentVersionId: 9, publishedVersionId: 0 },
+      set: { id: 5, name: "链接题集", currentVersionId: 9, publishedVersionId: 0, enabled: true },
       version: { id: 9, setId: 5, publishedAt: null, definition: blankDefinition() }
     });
     await flush();
@@ -272,7 +271,7 @@ describe("Choice framework page navigation", () => {
     expect(router.currentRoute.value.path).toBe("/choice/overview");
     const definition = JSON.parse(JSON.stringify(workspace.state.draft));
     vi.mocked(saveSet).mockResolvedValue({
-      set: { id: 12, name: definition.name, currentVersionId: 7, publishedVersionId: 0 },
+      set: { id: 12, name: definition.name, currentVersionId: 7, publishedVersionId: 0, enabled: true },
       version: { id: 7, setId: 12, publishedAt: null, definition }
     });
     await workspace.startPreview();
@@ -383,7 +382,7 @@ describe("Choice framework page navigation", () => {
     const sent = JSON.parse(JSON.stringify(vi.mocked(saveSet).mock.calls[0][2]));
     workspace.state.draft!.description = "请求过程中输入的新内容";
     finish({
-      set: { id: 12, name: sent.name, currentVersionId: 1, publishedVersionId: 0 },
+      set: { id: 12, name: sent.name, currentVersionId: 1, publishedVersionId: 0, enabled: true },
       version: { id: 1, setId: 12, publishedAt: null, definition: sent }
     });
     await flush();

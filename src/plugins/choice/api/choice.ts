@@ -59,6 +59,7 @@ export interface ChoiceSet {
   name: string;
   currentVersionId: number;
   publishedVersionId: number;
+  enabled: boolean;
 }
 export interface Detail {
   set: ChoiceSet;
@@ -99,7 +100,9 @@ export const saveSet = (id: number | undefined, expectedVersionId: number, defin
   request<Detail>(id ? "put" : "post", id ? `/sets/${id}` : "/sets", { expectedVersionId, definition });
 export const publishSet = (id: number, expectedVersionId: number) =>
   request<Detail>("post", `/sets/${id}/publish`, { expectedVersionId });
-export const archiveSet = (id: number) => request<null>("delete", `/sets/${id}`);
+export const setEnabled = (id: number, enabled: boolean) =>
+  request<ChoiceSet>("put", `/sets/${id}/enabled`, { enabled });
+export const deleteSet = (id: number) => request<null>("delete", `/sets/${id}`);
 export const playSet = (id: number) => request<Detail>("get", `/sets/${id}/play`);
 export const preview = (setId: number, versionId: number, answers: Answer[]) =>
   request<Result>("post", "/preview", { setId, versionId, answers });
