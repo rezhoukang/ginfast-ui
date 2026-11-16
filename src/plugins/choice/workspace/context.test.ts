@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { provideChoice, blankDefinition } from "./context";
 import { getSet, saveSet } from "../api/choice";
 import { Modal } from "@arco-design/web-vue";
+import { choiceMenuLocked, choiceSelection } from "./selection";
 vi.mock("../api/choice", () => ({
   getSet: vi.fn(),
   saveSet: vi.fn(),
@@ -97,6 +98,41 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("Choice framework page navigation", () => {
+  it("selects a set on the list and unlocks the question directory only after loading succeeds", async () => {
+    const router = await mount("/choice/sets");
+    const selection = choiceSelection(router);
+    expect(choiceMenuLocked("/choice/question-management", selection.value)).toBe(true);
+    expect(choiceMenuLocked("/system", selection.value)).toBe(false);
+    let finish!: (value: any) => void;
+    vi.mocked(getSet).mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          finish = resolve;
+        })
+    );
+    await workspace.openSet(5, "library");
+    await flush();
+    expect(router.currentRoute.value.path).toBe("/choice/sets");
+    expect(selection.value).toBeUndefined();
+    finish({
+      set: { id: 5, name: "已选择题集", currentVersionId: 9, publishedVersionId: 0 },
+      version: { id: 9, setId: 5, publishedAt: null, definition: blankDefinition() }
+    });
+    await flush();
+    expect(selection.value).toBe(5);
+    expect(choiceMenuLocked("/choice/question-management", selection.value)).toBe(false);
+    await router.push("/choice/questions");
+    await flush();
+    expect(router.currentRoute.value.query.set).toBe("5");
+    workspace.reset();
+    expect(selection.value).toBeUndefined();
+  });
+  it("keeps the question directory locked when a linked set cannot be loaded", async () => {
+    vi.mocked(getSet).mockRejectedValueOnce(new Error("题集不存在"));
+    const router = await mount("/choice/sets?set=999");
+    expect(choiceSelection(router).value).toBeUndefined();
+    expect(workspace.state.error).toBe("题集不存在");
+  });
   it("refreshes the active set after list editing without replacing another set's draft", async () => {
     const definition = blankDefinition();
     const detail = {

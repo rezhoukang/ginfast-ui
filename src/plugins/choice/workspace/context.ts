@@ -4,6 +4,7 @@ import { Message, Modal } from "@arco-design/web-vue";
 import { isAxiosError } from "axios";
 import { getSet, saveSet, publishSet, archiveSet, type Definition, type Detail } from "../api/choice";
 import { draftIssues, type DraftIssue } from "./readiness";
+import { choiceSelection } from "./selection";
 import { queryText, resolveView, workspaceKey, isChoicePath, viewPath, type ChoiceView } from "./navigation";
 
 export function blankDefinition(): Definition {
@@ -51,6 +52,15 @@ function createWorkspace() {
 
   if (!sessions.has(router)) sessions.set(router, createState());
   const state = sessions.get(router)!;
+  const selectedId = choiceSelection(router);
+  watch(
+    () =>
+      state.current && !state.pendingKey && state.loadedKey === String(state.current.set.id) ? state.current.set.id : undefined,
+    id => {
+      selectedId.value = id;
+    },
+    { immediate: true, flush: "sync" }
+  );
   if (!saveQueues.has(state)) saveQueues.set(state, { failed: "" });
   const queue = saveQueues.get(state)!;
   function cancelAutoSave() {

@@ -1,6 +1,17 @@
 <template>
   <template v-for="item in props.routeTree" :key="item.path">
-    <a-sub-menu v-if="menuShow(item)" :key="item.path">
+    <a-menu-item
+      v-if="menuShow(item) && choiceMenuLocked(item.path, selectedChoiceId)"
+      :key="item.path"
+      disabled
+      title="请先在题集列表选择题集"
+    >
+      <template #icon v-if="item.meta.svgIcon || item.meta.icon">
+        <MenuItemIcon :svg-icon="item.meta.svgIcon" :icon="item.meta.icon" />
+      </template>
+      <span>{{ $t(`menu.${item.meta.title}`) }}</span>
+    </a-menu-item>
+    <a-sub-menu v-else-if="menuShow(item)" :key="item.path">
       <template #icon v-if="item.meta.svgIcon || item.meta.icon">
         <MenuItemIcon :svg-icon="item.meta.svgIcon" :icon="item.meta.icon" />
       </template>
@@ -20,6 +31,9 @@
 import MenuItem from "@/layout/components/Menu/menu-item.vue";
 import MenuItemIcon from "@/layout/components/Menu/menu-item-icon.vue";
 import { useMenuMethod } from "@/hooks/useMenuMethod";
+import { useRouter } from "vue-router";
+import { choiceMenuLocked, choiceSelection } from "@/plugins/choice/workspace/selection";
+const selectedChoiceId = choiceSelection(useRouter());
 defineOptions({ name: "MenuItem", inheritAttrs: false });
 
 interface Props {

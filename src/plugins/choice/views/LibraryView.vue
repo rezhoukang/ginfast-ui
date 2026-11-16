@@ -113,14 +113,17 @@ onMounted(load);
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="操作"
-          :width="480"
+          :width="260"
           ><template #cell="{ record }"
             ><a-space wrap
               ><a-button size="small" :disabled="state.busy" @click="editor?.open(record.id)">编辑</a-button
-              ><a-button size="small" type="primary" @click="openSet(record.id, 'questions')">管理题目</a-button
-              ><a-button size="small" @click="openSet(record.id, 'dimensions')">变量</a-button>
-              <a-button size="small" @click="openSet(record.id, 'rules')">结论</a-button>
-              <a-button size="small" @click="openSet(record.id, 'preview')">预览</a-button>
+              ><a-button
+                size="small"
+                type="primary"
+                :disabled="state.busy || state.current?.set.id === record.id"
+                @click="openSet(record.id, 'library')"
+                >{{ state.current?.set.id === record.id ? "已选择" : "选择" }}</a-button
+              >
               <a-popconfirm content="归档后停止新的作答，历史答卷保留。确认归档？" @ok="archive(record.id)">
                 <a-button size="small" status="danger" :disabled="busy || state.busy">归档</a-button>
               </a-popconfirm></a-space
