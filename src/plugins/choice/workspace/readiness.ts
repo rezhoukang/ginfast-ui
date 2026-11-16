@@ -1,0 +1,84 @@
+import type { Definition, Question } from "../api/choice";
+import type { ChoiceView } from "./navigation";
+
+export interface DraftIssue {
+  message: string;
+  view: ChoiceView;
+  question?: string;
+}
+export const validCode = (code: string) => /^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(code);
+const finite = (value: number) => Number.isFinite(value) && Math.abs(value) <= 1000000;
+
+export function optionIssue(q: Question): string {
+  if (q.options.length < 2 || q.options.length > 28) return "需要 2–28 个选项";
+  if (q.options.some(o => !o.text.trim())) return "还有选项未填写内容";
+  if (new Set(q.options.map(o => o.code)).size !== q.options.length || q.options.some(o => !/^[a-z01]$/.test(o.code)))
+    return "选项编号重复或无效";
+  if (
+    q.kind === "boolean" &&
+    (q.options.length !== 2 || q.options.some(o => !["0", "1"].includes(o.code) || o.value !== (o.code === "1")))
+  )
+    return "判断题需要 0 / 1 两个选项及对应真假值";
+  if (q.options.some(o => o.correct !== undefined)) {
+    const count = q.options.filter(o => o.correct === true).length;
+    if (q.options.some(o => typeof o.correct !== "boolean") || count === 0 || (q.kind !== "multiple" && count !== 1))
+      return q.kind === "multiple" ? "请选择正确答案，并统一设置判分方式" : "请选择唯一正确答案，并统一设置判分方式";
+  }
+  return "";
+}
+
+// Editing guidance only. The backend remains authoritative for full validation.
+export function draftIssues(d: Definition): DraftIssue[] {
+  const issues: DraftIssue[] = [];
+  const add = (view: ChoiceView, message: string, question?: string) => issues.push({ view, message, question });
+  if (!d.name.trim()) add("overview", "填写题集名称");
+  if (!d.dimensions.length) add("dimensions", "添加至少一个计分维度");
+  const dimensions = new Map(d.dimensions.map(dim => [dim.code, dim]));
+  const base = (code: string) => dimensions.has(code) && !dimensions.get(code)!.terms.length;
+  const seenDimensions = new Set<string>();
+  for (const dim of d.dimensions) {
+    if (!validCode(dim.code) || seenDimensions.has(dim.code) || !dim.name.trim() || !finite(dim.initial))
+      add("dimensions", `维度 ${dim.name || dim.code}：检查编号、名称和初始值`);
+    seenDimensions.add(dim.code);
+    if (
+      dim.terms.some(t => !base(t.dimension) || !finite(t.weight)) ||
+      new Set(dim.terms.map(t => t.dimension)).size !== dim.terms.length
+    )
+      add("dimensions", `维度 ${dim.name}：计算项须引用不重复的原始维度`);
+  }
+  if (!d.questions.length) add("questions", "添加至少一道题目");
+  const seenQuestions = new Set<string>();
+  for (const q of d.questions) {
+    if (!q.title.trim() || !validCode(q.code) || seenQuestions.has(q.code))
+      add("questions", `题目 ${q.code}：完善题目内容和唯一编号`);
+    seenQuestions.add(q.code);
+    const problem = optionIssue(q);
+    if (problem) add("options", `${q.code}：${problem}`, q.code);
+    if (
+      q.options.some(
+        o =>
+          o.effects.some(e => !base(e.dimension) || !finite(e.delta)) ||
+          new Set(o.effects.map(e => e.dimension)).size !== o.effects.length
+      )
+    )
+      add("options", `${q.code}：检查选项引用的维度及增减值`, q.code);
+  }
+  const seenRules = new Set<string>();
+  for (const rule of d.rules) {
+    const key = `${rule.group}/${rule.code}`;
+    if (!validCode(rule.group) || !validCode(rule.code) || !rule.name.trim() || seenRules.has(key))
+      add("rules", `规则 ${rule.name || rule.code}：检查分组、编号和名称`);
+    seenRules.add(key);
+    if (
+      rule.conditions.some(
+        c =>
+          !dimensions.has(c.dimension) ||
+          (c.compareTo && !dimensions.has(c.compareTo)) ||
+          !finite(c.value) ||
+          ![">", ">=", "<", "<=", "==", "!="].includes(c.operator)
+      )
+    )
+      add("rules", `规则 ${rule.name}：检查比较维度及条件`);
+  }
+  return issues;
+}
