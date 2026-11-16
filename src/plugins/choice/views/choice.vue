@@ -19,7 +19,7 @@ const editing = computed(() => !["library", "history", "take"].includes(view.val
 <template>
   <div class="snow-page">
     <div class="snow-inner">
-      <a-card :title="viewTitles[view]" :bordered="false" :loading="state.busy">
+      <a-card :bordered="false" :loading="state.busy">
         <template v-if="editing && state.draft" #extra>
           <a-space wrap
             ><a-tag>{{ state.draft.name }}</a-tag
