@@ -75,11 +75,16 @@ function move(i: number, delta: number) {
 </script>
 <template>
   <a-space direction="vertical" fill :size="16">
-    <a-space
-      ><a-button type="primary" :disabled="questions.length >= 500" @click="edit()"
-        ><template #icon><icon-plus /></template>新增题目</a-button
-      ></a-space
-    >
+    <s-layout-tools>
+      <template #left
+        ><a-space
+          ><a-button type="primary" :disabled="questions.length >= 500" @click="edit()"
+            ><template #icon><icon-plus /></template>新增题目</a-button
+          ></a-space
+        ></template
+      >
+      <template #right><slot name="actions" /></template>
+    </s-layout-tools>
     <a-table :data="questions" :pagination="false" :bordered="{ wrapper: true, cell: true }"
       ><template #columns>
         <a-table-column

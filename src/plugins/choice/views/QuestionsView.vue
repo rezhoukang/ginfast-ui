@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import WorkspaceActions from "../components/WorkspaceActions.vue";
 import { ref } from "vue";
 import { useChoice } from "../workspace/context";
 import type { Question } from "../api/choice";
@@ -25,7 +26,9 @@ function applyOptions() {
 }
 </script>
 <template>
-  <QuestionEditor v-if="state.draft" v-model="state.draft.questions" @options="openOptions" />
+  <QuestionEditor v-if="state.draft" v-model="state.draft.questions" @options="openOptions"
+    ><template #actions><WorkspaceActions /></template
+  ></QuestionEditor>
   <a-modal
     v-model:visible="visible"
     title="选项管理"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import WorkspaceActions from "../components/WorkspaceActions.vue";
 import { computed, ref } from "vue";
 import { useChoice } from "../workspace/context";
 import { queryText } from "../workspace/navigation";
@@ -51,9 +52,13 @@ const questionIndex = computed(() => state.draft?.questions.findIndex(q => q.cod
       :focus-request="state.focusRequest"
       :focus-code="queryText(route.query.option)"
       @editing="editingOption = $event"
-    />
-    <a-empty v-else description="还没有题目"
-      ><a-button type="primary" @click="navigate('questions')">去添加题目</a-button></a-empty
-    >
+      ><template #actions><WorkspaceActions /></template
+    ></OptionEditor>
+    <template v-else>
+      <s-layout-tools
+        ><template #right><WorkspaceActions /></template
+      ></s-layout-tools>
+      <a-empty description="还没有题目"><a-button type="primary" @click="navigate('questions')">去添加题目</a-button></a-empty>
+    </template>
   </a-space>
 </template>

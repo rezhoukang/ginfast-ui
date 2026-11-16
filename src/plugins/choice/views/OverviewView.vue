@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import WorkspaceActions from "../components/WorkspaceActions.vue";
 import { useChoice } from "../workspace/context";
 import DefinitionTransfer from "../components/DefinitionTransfer.vue";
 const { state, archive, navigate, issues, fixIssue } = useChoice();
 </script>
 <template>
   <a-space v-if="state.draft" direction="vertical" fill :size="16">
+    <s-layout-tools
+      ><template #right><WorkspaceActions /></template
+    ></s-layout-tools>
     <a-form :model="state.draft" auto-label-width>
       <a-form-item label="题集名称" required><a-input v-model="state.draft.name" :max-length="120" /></a-form-item>
       <a-form-item label="题集说明"

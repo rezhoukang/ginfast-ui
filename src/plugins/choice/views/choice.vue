@@ -2,7 +2,7 @@
 import { computed, defineAsyncComponent } from "vue";
 import { provideChoice } from "../workspace/context";
 import { viewTitles } from "../workspace/navigation";
-const { state, dirty, issues, fixIssue, view, navigate, save } = provideChoice();
+const { state, issues, fixIssue, view } = provideChoice();
 const views = {
   library: defineAsyncComponent(() => import("./LibraryView.vue")),
   overview: defineAsyncComponent(() => import("./OverviewView.vue")),
@@ -20,16 +20,6 @@ const editing = computed(() => !["library", "history", "take"].includes(view.val
   <div class="snow-page">
     <div class="snow-inner">
       <a-card :bordered="false" :loading="state.busy">
-        <template v-if="editing && state.draft" #extra>
-          <a-space wrap
-            ><a-tag>{{ state.draft.name }}</a-tag
-            ><a-tag :color="dirty ? 'orange' : 'green'">{{ dirty ? "有未保存修改" : "已保存" }}</a-tag>
-            <a-button @click="navigate('library')">切换题集</a-button>
-            <a-button type="primary" :loading="state.busy" :disabled="!dirty || state.editorOpen" @click="save"
-              >保存草稿</a-button
-            >
-          </a-space>
-        </template>
         <a-space direction="vertical" fill :size="16">
           <a-alert v-if="editing && state.showIssues && issues.length" type="warning">
             <template #title>还有 {{ issues.length }} 项待完善，点击直接处理</template>

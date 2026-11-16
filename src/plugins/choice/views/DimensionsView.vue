@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import WorkspaceActions from "../components/WorkspaceActions.vue";
 import { useChoice } from "../workspace/context";
 import DimensionEditor from "../components/DimensionEditor.vue";
 const { state, route } = useChoice();
@@ -10,5 +11,6 @@ const { state, route } = useChoice();
     :definition="state.draft"
     :focus-request="state.focusRequest"
     :focus-code="String(route.query.item || '')"
-  />
+    ><template #actions><WorkspaceActions /></template
+  ></DimensionEditor>
 </template>

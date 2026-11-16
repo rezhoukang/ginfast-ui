@@ -102,15 +102,20 @@ function move(i: number, delta: number) {
 </script>
 <template>
   <a-space direction="vertical" fill :size="16">
-    <a-space v-if="!visible" wrap
-      ><template v-if="question"
-        ><a-tag>{{ question.code }}</a-tag
-        ><a-typography-text>{{ question.title }}</a-typography-text
-        ><a-button type="primary" :disabled="question.kind === 'boolean' || question.options.length >= 28" @click="edit()"
-          ><template #icon><icon-plus /></template>新增选项</a-button
+    <s-layout-tools v-if="!visible || $slots.actions">
+      <template #left
+        ><a-space v-if="!visible" wrap
+          ><template v-if="question"
+            ><a-tag>{{ question.code }}</a-tag
+            ><a-typography-text>{{ question.title }}</a-typography-text
+            ><a-button type="primary" :disabled="question.kind === 'boolean' || question.options.length >= 28" @click="edit()"
+              ><template #icon><icon-plus /></template>新增选项</a-button
+            ></template
+          ></a-space
         ></template
-      ></a-space
-    >
+      >
+      <template #right><slot name="actions" /></template>
+    </s-layout-tools>
     <a-alert v-if="!question" type="warning">未找到当前题目，请从题目列表的“选项管理”进入。</a-alert>
     <template v-else>
       <a-space v-if="!visible" wrap>
