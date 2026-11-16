@@ -1,7 +1,6 @@
 export const viewTitles = {
   library: "题集管理",
-  overview: "题集详情",
-  browse: "查看全部",
+  overview: "题集设置",
   questions: "题目管理",
   options: "选项管理",
   dimensions: "维度配置",
@@ -18,12 +17,11 @@ export function isChoicePath(path: string) {
   return path === "/choice" || path.startsWith("/choice/");
 }
 export function viewPath(view: ChoiceView) {
-  return `/choice/${["library", "overview", "browse"].includes(view) ? "sets" : view}`;
+  return `/choice/${view === "library" ? "sets" : view}`;
 }
 export function resolveView(path: string, query: Record<string, unknown>): ChoiceView {
   const segment = path.split("/").pop() || "";
-  if (segment === "sets")
-    return query.all === "1" ? "browse" : query.section === "details" || query.set === "new" ? "overview" : "library";
+  if (segment === "sets") return query.section === "details" || query.set === "new" ? "overview" : "library";
   if (segment in viewTitles) return segment as ChoiceView;
   const legacy = queryText(query.view);
   return legacy in viewTitles ? (legacy as ChoiceView) : "library";

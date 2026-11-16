@@ -1,7 +1,6 @@
 <template>
   <template v-for="item in props.routeTree" :key="item.path">
-    <component v-if="aMenuShow(item) && menuExtension(item.path)" :is="menuExtension(item.path)!.component" />
-    <a-sub-menu v-else-if="menuShow(item)" :key="item.path">
+    <a-sub-menu v-if="menuShow(item)" :key="item.path">
       <template #icon v-if="item.meta.svgIcon || item.meta.icon">
         <MenuItemIcon :svg-icon="item.meta.svgIcon" :icon="item.meta.icon" />
       </template>
@@ -20,7 +19,6 @@
 <script setup lang="ts">
 import MenuItem from "@/layout/components/Menu/menu-item.vue";
 import MenuItemIcon from "@/layout/components/Menu/menu-item-icon.vue";
-import { menuExtension } from "./extensions";
 import { useMenuMethod } from "@/hooks/useMenuMethod";
 defineOptions({ name: "MenuItem", inheritAttrs: false });
 

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import AllContent from "../components/AllContent.vue";
 import { onMounted, ref } from "vue";
 import { listSets, type ChoiceSet } from "../api/choice";
 import { describeError, useChoice } from "../workspace/context";
@@ -26,7 +25,6 @@ onMounted(load);
 </script>
 <template>
   <a-space direction="vertical" fill :size="16">
-    <AllContent />
     <a-space wrap
       ><a-button type="primary" @click="create()"
         ><template #icon><icon-plus /></template>新建题集</a-button

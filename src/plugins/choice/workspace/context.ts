@@ -1,7 +1,7 @@
 import { computed, inject, onBeforeUnmount, provide, reactive, watch, type InjectionKey } from "vue";
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
 import { Message, Modal } from "@arco-design/web-vue";
-import { getSet, listSets, saveSet, publishSet, archiveSet, type Definition, type Detail, type ChoiceSet } from "../api/choice";
+import { getSet, saveSet, publishSet, archiveSet, type Definition, type Detail } from "../api/choice";
 import { draftIssues, type DraftIssue } from "./readiness";
 import { queryText, resolveView, workspaceKey, isChoicePath, viewPath, type ChoiceView } from "./navigation";
 
@@ -19,7 +19,6 @@ export const describeError = (error: unknown) => (error instanceof Error ? error
 
 function createState() {
   return reactive({
-    scope: "",
     generation: 0,
     current: undefined as Detail | undefined,
     draft: undefined as Definition | undefined,
@@ -29,13 +28,6 @@ function createState() {
     busy: false,
     error: "",
     showIssues: false,
-    catalog: [] as ChoiceSet[],
-    details: {} as Record<string, Detail>,
-    catalogPage: 0,
-    catalogTotal: 0,
-    catalogBusy: false,
-    catalogError: "",
-    expandedKeys: [] as string[],
     editorOwner: undefined as symbol | undefined,
     editorOpen: false,
     editorDirty: false,
@@ -46,15 +38,15 @@ function createState() {
 // so navigating the framework's separate menu pages does not lose edits.
 const sessions: WeakMap<object, ReturnType<typeof createState>> = import.meta.hot?.data.choiceSessions || new WeakMap();
 if (import.meta.hot) import.meta.hot.data.choiceSessions = sessions;
-function createWorkspace(registerGuards = true) {
+function createWorkspace() {
   const route = useRoute();
   const router = useRouter();
 
   if (!sessions.has(router)) sessions.set(router, createState());
   const state = sessions.get(router)!;
-  function reset(scope = state.scope) {
+  function reset() {
     const generation = state.generation + 1;
-    Object.assign(state, createState(), { scope, generation });
+    Object.assign(state, createState(), { generation });
   }
   const dirty = computed(() => !!state.draft && JSON.stringify(state.draft) !== state.baseline);
   const issues = computed(() => (state.draft ? draftIssues(state.draft) : []));
@@ -79,7 +71,7 @@ function createWorkspace(registerGuards = true) {
   async function guard(to: { path: string; query: Record<string, unknown> }) {
     if (isChoicePath(to.path)) {
       const target = workspaceKey(to.query);
-      if (!target && state.loadedKey && !state.busy && !["library", "browse", "history"].includes(resolveView(to.path, to.query)))
+      if (!target && state.loadedKey && !state.busy && !["library", "history"].includes(resolveView(to.path, to.query)))
         return { path: to.path, query: { ...to.query, set: state.loadedKey } };
       if (state.busy) return target === state.loadedKey && !dirty.value;
       if (!target || target === state.loadedKey || target === state.pendingKey) return await confirmDiscard(true);
@@ -89,26 +81,18 @@ function createWorkspace(registerGuards = true) {
     reset();
     return true;
   }
-  if (registerGuards) {
-    onBeforeRouteUpdate(guard);
-    onBeforeRouteLeave(guard);
-  }
+  onBeforeRouteUpdate(guard);
+  onBeforeRouteLeave(guard);
   function unload(e: BeforeUnloadEvent) {
     if (dirty.value || state.editorDirty) {
       e.preventDefault();
       e.returnValue = "";
     }
   }
-  if (registerGuards) {
-    window.addEventListener("beforeunload", unload);
-    onBeforeUnmount(() => window.removeEventListener("beforeunload", unload));
-  }
+  window.addEventListener("beforeunload", unload);
+  onBeforeUnmount(() => window.removeEventListener("beforeunload", unload));
   function install(detail: Detail) {
     state.current = detail;
-    state.details[String(detail.set.id)] = detail;
-    const catalogIndex = state.catalog.findIndex(s => s.id === detail.set.id);
-    if (catalogIndex >= 0) state.catalog[catalogIndex] = detail.set;
-    else state.catalog.unshift(detail.set);
     state.draft = JSON.parse(JSON.stringify(detail.version.definition));
     state.baseline = JSON.stringify(state.draft);
   }
@@ -126,8 +110,8 @@ function createWorkspace(registerGuards = true) {
     }
   }
   watch(
-    () => [workspaceKey(route.query), state.scope] as const,
-    async ([key]) => {
+    () => workspaceKey(route.query),
+    async key => {
       if (!isChoicePath(route.path) || !key || key === state.loadedKey || key === state.pendingKey) return;
       state.current = undefined;
       state.draft = undefined;
@@ -154,13 +138,13 @@ function createWorkspace(registerGuards = true) {
   function location(target: ChoiceView, query: Record<string, string> = {}) {
     return {
       path: viewPath(target),
-      query: { ...(target === "overview" ? { section: "details" } : {}), ...(target === "browse" ? { all: "1" } : {}), ...query }
+      query
     };
   }
   function navigate(target: ChoiceView, query: Record<string, string> = {}) {
     return router.push(
       location(target, {
-        ...(!["library", "browse", "history"].includes(target) && state.loadedKey ? { set: state.loadedKey } : {}),
+        ...(!["library", "history"].includes(target) && state.loadedKey ? { set: state.loadedKey } : {}),
         ...query
       })
     );
@@ -172,38 +156,6 @@ function createWorkspace(registerGuards = true) {
       return Promise.resolve();
     }
     return router.push(destination);
-  }
-  async function loadCatalog(reset = false) {
-    if (state.catalogBusy) return;
-    state.catalogBusy = true;
-    state.catalogError = "";
-    const generation = state.generation;
-    try {
-      const page = reset ? 1 : state.catalogPage + 1;
-      const data = await listSets(page);
-      if (generation !== state.generation) return;
-      const merged = new Map((reset ? [] : state.catalog).map(s => [s.id, s]));
-      (data.list || []).forEach(s => merged.set(s.id, s));
-      if (state.current) merged.set(state.current.set.id, state.current.set);
-      state.catalog = [...merged.values()];
-      state.catalogPage = page;
-      state.catalogTotal = data.total;
-      if (reset) state.details = state.current ? { [state.current.set.id]: state.current } : {};
-    } catch (e) {
-      if (generation === state.generation) state.catalogError = describeError(e);
-    } finally {
-      if (generation === state.generation) state.catalogBusy = false;
-    }
-  }
-  async function loadTreeSet(id: number) {
-    if (!state.details[id]) {
-      try {
-        state.details[id] = await getSet(id);
-      } catch (e) {
-        state.catalogError = describeError(e);
-        throw e;
-      }
-    }
   }
   function fixIssue(issue: DraftIssue) {
     return issue.question ? openOptions(issue.question) : navigate(issue.view);
@@ -282,8 +234,6 @@ function createWorkspace(registerGuards = true) {
     navigate,
     openSet,
     openContent,
-    loadCatalog,
-    loadTreeSet,
     openOptions,
     create,
     save,
@@ -304,28 +254,4 @@ export function useChoice() {
   const workspace = inject(key);
   if (!workspace) throw new Error("Choice workspace missing");
   return workspace;
-}
-
-// The main navigation shares state, but route guards belong only to the page.
-export const useChoiceNavigation = () => createWorkspace(false);
-// Arrow expansion loads only navigation data, without switching or replacing a draft.
-export async function loadChoiceNavigationSet(router: ReturnType<typeof useRouter>, id: number) {
-  const state = sessions.get(router);
-  if (!state || state.details[id]) return;
-  const generation = state.generation;
-  try {
-    const detail = await getSet(id);
-    if (generation === state.generation) state.details[id] = detail;
-  } catch (error) {
-    if (generation === state.generation) state.catalogError = describeError(error);
-  }
-}
-export function reopenChoiceContent(router: ReturnType<typeof useRouter>, target: string) {
-  const resolved = router.resolve(target);
-  const current = router.currentRoute.value;
-  const sorted = (query: Record<string, unknown>) => JSON.stringify(Object.entries(query).sort(([a], [b]) => a.localeCompare(b)));
-  if (resolved.path !== current.path || sorted(resolved.query) !== sorted(current.query)) return false;
-  const state = sessions.get(router);
-  if (state && !state.editorOpen) state.focusRequest++;
-  return true;
 }
