@@ -1,11 +1,12 @@
 import { createRenderer, defineComponent, h, nextTick } from "vue";
 import { createMemoryHistory, createRouter, RouterView } from "vue-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { provideChoice, blankDefinition } from "./context";
-import { getSet, saveSet } from "../api/choice";
+import { provideChoice, blankDefinition, useChoiceNavigation, reopenChoiceContent, loadChoiceNavigationSet } from "./context";
+import { getSet, saveSet, listSets } from "../api/choice";
 import { Modal } from "@arco-design/web-vue";
 vi.mock("../api/choice", () => ({
   getSet: vi.fn(),
+  listSets: vi.fn(),
   saveSet: vi.fn(),
   publishSet: vi.fn(),
   archiveSet: vi.fn()
@@ -25,6 +26,7 @@ const renderer = createRenderer<any, any>({
   nextSibling: () => null
 });
 let workspace: ReturnType<typeof provideChoice>;
+let navigation: ReturnType<typeof useChoiceNavigation>;
 function completeDraft() {
   workspace.state.draft!.questions = [
     {
@@ -61,10 +63,13 @@ async function mount(path = "/choice/overview?set=new") {
   await router.isReady();
   const app = renderer.createApp(
     defineComponent({
-      setup: () => () =>
-        h(RouterView, null, {
-          default: ({ Component, route }: any) => (Component ? h(Component, { key: route.fullPath }) : null)
-        })
+      setup: () => {
+        navigation = useChoiceNavigation();
+        return () =>
+          h(RouterView, null, {
+            default: ({ Component, route }: any) => (Component ? h(Component, { key: route.fullPath }) : null)
+          });
+      }
     })
   );
   app.use(router);
@@ -88,6 +93,48 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("Choice framework page navigation", () => {
+  it("expanding another set loads its children without replacing the active draft", async () => {
+    const router = await mount();
+    workspace.state.draft!.name = "未保存题集";
+    vi.mocked(getSet).mockResolvedValue({
+      set: { id: 9, name: "另一题集", currentVersionId: 20, publishedVersionId: 0 },
+      version: { id: 20, setId: 9, publishedAt: null, definition: blankDefinition() }
+    });
+    await loadChoiceNavigationSet(router, 9);
+    expect(workspace.state.details[9].set.name).toBe("另一题集");
+    expect(workspace.state.draft!.name).toBe("未保存题集");
+    expect(router.currentRoute.value.query.set).toBe("new");
+    await loadChoiceNavigationSet(router, 9);
+    expect(getSet).toHaveBeenCalledTimes(1);
+  });
+  it("shares sidebar state without duplicating requests and reopens a closed current editor", async () => {
+    const router = await mount();
+    expect(navigation.state).toBe(workspace.state);
+    await router.push("/choice/options?set=new&question=Q1&option=b");
+    await flush();
+    const initial = workspace.state.focusRequest;
+    expect(reopenChoiceContent(router, "/choice/options?option=b&question=Q1&set=new")).toBe(true);
+    expect(workspace.state.focusRequest).toBe(initial + 1);
+    workspace.state.editorOpen = true;
+    reopenChoiceContent(router, "/choice/options?option=b&question=Q1&set=new");
+    expect(workspace.state.focusRequest).toBe(initial + 1);
+    expect(reopenChoiceContent(router, "/choice/questions?set=new")).toBe(false);
+  });
+  it("does not reinstall a catalog response from a previous account scope", async () => {
+    await mount();
+    let finish!: (value: any) => void;
+    vi.mocked(listSets).mockReturnValue(
+      new Promise(resolve => {
+        finish = resolve;
+      })
+    );
+    const request = navigation.loadCatalog(true);
+    navigation.reset("another-user:tenant");
+    finish({ list: [{ id: 99, name: "previous account" }], total: 1 });
+    await request;
+    expect(navigation.state.catalog).toEqual([]);
+    expect(navigation.state.catalogPage).toBe(0);
+  });
   it("retains the same unsaved draft across menu pages and the set library", async () => {
     const router = await mount();
     workspace.state.draft!.name = "保留草稿";

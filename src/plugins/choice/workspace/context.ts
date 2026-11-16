@@ -19,6 +19,8 @@ export const describeError = (error: unknown) => (error instanceof Error ? error
 
 function createState() {
   return reactive({
+    scope: "",
+    generation: 0,
     current: undefined as Detail | undefined,
     draft: undefined as Definition | undefined,
     baseline: "",
@@ -44,12 +46,16 @@ function createState() {
 // so navigating the framework's separate menu pages does not lose edits.
 const sessions: WeakMap<object, ReturnType<typeof createState>> = import.meta.hot?.data.choiceSessions || new WeakMap();
 if (import.meta.hot) import.meta.hot.data.choiceSessions = sessions;
-function createWorkspace() {
+function createWorkspace(registerGuards = true) {
   const route = useRoute();
   const router = useRouter();
 
   if (!sessions.has(router)) sessions.set(router, createState());
   const state = sessions.get(router)!;
+  function reset(scope = state.scope) {
+    const generation = state.generation + 1;
+    Object.assign(state, createState(), { scope, generation });
+  }
   const dirty = computed(() => !!state.draft && JSON.stringify(state.draft) !== state.baseline);
   const issues = computed(() => (state.draft ? draftIssues(state.draft) : []));
   const view = computed(() => resolveView(route.path, route.query));
@@ -80,19 +86,23 @@ function createWorkspace() {
       return !state.busy && (await confirmDiscard());
     }
     if (state.busy || !(await confirmDiscard())) return false;
-    Object.assign(state, createState());
+    reset();
     return true;
   }
-  onBeforeRouteUpdate(guard);
-  onBeforeRouteLeave(guard);
+  if (registerGuards) {
+    onBeforeRouteUpdate(guard);
+    onBeforeRouteLeave(guard);
+  }
   function unload(e: BeforeUnloadEvent) {
     if (dirty.value || state.editorDirty) {
       e.preventDefault();
       e.returnValue = "";
     }
   }
-  window.addEventListener("beforeunload", unload);
-  onBeforeUnmount(() => window.removeEventListener("beforeunload", unload));
+  if (registerGuards) {
+    window.addEventListener("beforeunload", unload);
+    onBeforeUnmount(() => window.removeEventListener("beforeunload", unload));
+  }
   function install(detail: Detail) {
     state.current = detail;
     state.details[String(detail.set.id)] = detail;
@@ -106,17 +116,18 @@ function createWorkspace() {
     if (state.busy) return;
     state.busy = true;
     state.error = "";
+    const generation = state.generation;
     try {
       await action();
     } catch (e) {
-      state.error = describeError(e);
+      if (generation === state.generation) state.error = describeError(e);
     } finally {
-      state.busy = false;
+      if (generation === state.generation) state.busy = false;
     }
   }
   watch(
-    () => workspaceKey(route.query),
-    async key => {
+    () => [workspaceKey(route.query), state.scope] as const,
+    async ([key]) => {
       if (!isChoicePath(route.path) || !key || key === state.loadedKey || key === state.pendingKey) return;
       state.current = undefined;
       state.draft = undefined;
@@ -124,16 +135,19 @@ function createWorkspace() {
       state.loadedKey = "";
       state.error = "";
       state.pendingKey = key;
+      const generation = state.generation;
       await run(async () => {
         if (queryText(route.query.set) === "new") state.draft = blankDefinition();
         else {
           const id = Number(queryText(route.query.set));
           if (!Number.isSafeInteger(id) || id < 1) throw new Error("题集编号无效");
-          install(await getSet(id));
+          const detail = await getSet(id);
+          if (generation !== state.generation) return;
+          install(detail);
         }
-        state.loadedKey = key;
+        if (generation === state.generation) state.loadedKey = key;
       });
-      state.pendingKey = "";
+      if (generation === state.generation) state.pendingKey = "";
     },
     { immediate: true }
   );
@@ -163,9 +177,11 @@ function createWorkspace() {
     if (state.catalogBusy) return;
     state.catalogBusy = true;
     state.catalogError = "";
+    const generation = state.generation;
     try {
       const page = reset ? 1 : state.catalogPage + 1;
       const data = await listSets(page);
+      if (generation !== state.generation) return;
       const merged = new Map((reset ? [] : state.catalog).map(s => [s.id, s]));
       (data.list || []).forEach(s => merged.set(s.id, s));
       if (state.current) merged.set(state.current.set.id, state.current.set);
@@ -174,9 +190,9 @@ function createWorkspace() {
       state.catalogTotal = data.total;
       if (reset) state.details = state.current ? { [state.current.set.id]: state.current } : {};
     } catch (e) {
-      state.catalogError = describeError(e);
+      if (generation === state.generation) state.catalogError = describeError(e);
     } finally {
-      state.catalogBusy = false;
+      if (generation === state.generation) state.catalogBusy = false;
     }
   }
   async function loadTreeSet(id: number) {
@@ -251,12 +267,13 @@ function createWorkspace() {
       state.baseline = JSON.stringify(state.draft);
     });
     if (!state.error) {
-      Object.assign(state, createState());
+      reset();
       await navigate("library");
     }
   }
   return {
     state,
+    reset,
     dirty,
     issues,
     fixIssue,
@@ -287,4 +304,28 @@ export function useChoice() {
   const workspace = inject(key);
   if (!workspace) throw new Error("Choice workspace missing");
   return workspace;
+}
+
+// The main navigation shares state, but route guards belong only to the page.
+export const useChoiceNavigation = () => createWorkspace(false);
+// Arrow expansion loads only navigation data, without switching or replacing a draft.
+export async function loadChoiceNavigationSet(router: ReturnType<typeof useRouter>, id: number) {
+  const state = sessions.get(router);
+  if (!state || state.details[id]) return;
+  const generation = state.generation;
+  try {
+    const detail = await getSet(id);
+    if (generation === state.generation) state.details[id] = detail;
+  } catch (error) {
+    if (generation === state.generation) state.catalogError = describeError(error);
+  }
+}
+export function reopenChoiceContent(router: ReturnType<typeof useRouter>, target: string) {
+  const resolved = router.resolve(target);
+  const current = router.currentRoute.value;
+  const sorted = (query: Record<string, unknown>) => JSON.stringify(Object.entries(query).sort(([a], [b]) => a.localeCompare(b)));
+  if (resolved.path !== current.path || sorted(resolved.query) !== sorted(current.query)) return false;
+  const state = sessions.get(router);
+  if (state && !state.editorOpen) state.focusRequest++;
+  return true;
 }
