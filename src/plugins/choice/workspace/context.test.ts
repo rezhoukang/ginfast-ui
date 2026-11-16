@@ -82,11 +82,18 @@ async function flush() {
   }
 }
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
+  vi.useFakeTimers();
+  vi.mocked(saveSet).mockImplementation(async (id, version, definition) => ({
+    set: { id: id || 12, name: definition.name, currentVersionId: version + 1, publishedVersionId: 0 },
+    version: { id: version + 1, setId: id || 12, publishedAt: null, definition: JSON.parse(JSON.stringify(definition)) }
+  }));
   vi.stubGlobal("window", { addEventListener: vi.fn(), removeEventListener: vi.fn() });
 });
 afterEach(() => {
   dispose?.();
+  vi.clearAllTimers();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 describe("Choice framework page navigation", () => {
@@ -107,6 +114,8 @@ describe("Choice framework page navigation", () => {
   it("canceling a set switch or leaving the plugin preserves the draft", async () => {
     const router = await mount();
     workspace.state.draft!.name = "未保存";
+    workspace.state.editorOpen = true;
+    workspace.state.editorDirty = true;
     vi.mocked(Modal.confirm).mockImplementation((options: any) => {
       options.onCancel();
       return {} as any;
@@ -160,6 +169,8 @@ describe("Choice framework page navigation", () => {
   });
   it("closing the discard confirmation cancels navigation", async () => {
     const router = await mount();
+    workspace.state.editorOpen = true;
+    workspace.state.editorDirty = true;
     vi.mocked(Modal.confirm).mockImplementation((options: any) => {
       expect(options.maskClosable).toBe(true);
       options.onClose();
@@ -187,15 +198,16 @@ describe("Choice framework page navigation", () => {
     expect(workspace.state.current!.set.id).toBe(5);
     expect(getSet).toHaveBeenCalledTimes(1);
   });
-  it("blocks incomplete saves and links directly to the unfinished question", async () => {
+  it("preserves incomplete work but blocks preview and links to the unfinished question", async () => {
     const router = await mount();
     completeDraft();
     workspace.state.draft!.questions[0].options[0].text = "";
-    expect(await workspace.save()).toBe(false);
-    expect(saveSet).not.toHaveBeenCalled();
+    expect(await workspace.save()).toBe(true);
+    expect(await workspace.startPreview()).toBe(false);
+    expect(saveSet).toHaveBeenCalledTimes(1);
     await workspace.fixIssue(workspace.issues.value[0]);
     await flush();
-    expect(router.currentRoute.value.query).toMatchObject({ set: "new", question: "Q1" });
+    expect(router.currentRoute.value.query).toMatchObject({ set: "12", question: "Q1" });
   });
   it("saves once before opening preview and stays put when saving fails", async () => {
     const router = await mount();
@@ -244,5 +256,98 @@ describe("Choice framework page navigation", () => {
     expect(router.currentRoute.value.path).toBe("/choice/overview");
     expect(await workspace.save()).toBe(false);
     expect(saveSet).not.toHaveBeenCalled();
+  });
+  it("does not save an untouched new form, debounces input, and saves incomplete questions", async () => {
+    await mount();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(saveSet).not.toHaveBeenCalled();
+    workspace.state.draft!.name = "新建题集名称";
+    await flush();
+    await vi.advanceTimersByTimeAsync(300);
+    workspace.state.draft!.description = "继续输入";
+    await flush();
+    await vi.advanceTimersByTimeAsync(600);
+    expect(saveSet).toHaveBeenCalledTimes(1);
+    expect(workspace.dirty.value).toBe(false);
+    completeDraft();
+    workspace.state.draft!.questions[0].options[0].text = "";
+    await flush();
+    await vi.advanceTimersByTimeAsync(600);
+    expect(saveSet).toHaveBeenCalledTimes(2);
+    expect(workspace.dirty.value).toBe(false);
+    expect(workspace.issues.value.length).toBeGreaterThan(0);
+  });
+  it("keeps one pending save when navigating between framework menu views", async () => {
+    await mount();
+    workspace.state.draft!.name = "尚未添加题目的题集";
+    await workspace.navigate("questions");
+    await flush();
+    await workspace.navigate("rules");
+    await flush();
+    await vi.advanceTimersByTimeAsync(600);
+    expect(saveSet).toHaveBeenCalledTimes(1);
+  });
+  it("waits for option confirmation before automatic persistence", async () => {
+    await mount();
+    workspace.state.editorOpen = true;
+    completeDraft();
+    await flush();
+    await vi.advanceTimersByTimeAsync(1200);
+    expect(saveSet).not.toHaveBeenCalled();
+    workspace.state.editorOpen = false;
+    await flush();
+    await vi.advanceTimersByTimeAsync(600);
+    expect(saveSet).toHaveBeenCalledTimes(1);
+  });
+  it("retains failed edits without an automatic retry loop and allows explicit retry", async () => {
+    await mount();
+    completeDraft();
+    vi.mocked(saveSet).mockRejectedValueOnce(new Error("版本冲突"));
+    await flush();
+    await vi.advanceTimersByTimeAsync(600);
+    expect(workspace.state.saveFailed).toBe(true);
+    expect(workspace.dirty.value).toBe(true);
+    expect(workspace.state.error).toContain("版本冲突");
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(saveSet).toHaveBeenCalledTimes(1);
+    expect(await workspace.save()).toBe(true);
+    expect(workspace.state.saveFailed).toBe(false);
+  });
+  it("does not let a save response overwrite newer input", async () => {
+    await mount();
+    completeDraft();
+    let finish!: (value: any) => void;
+    vi.mocked(saveSet).mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          finish = resolve;
+        })
+    );
+    await flush();
+    await vi.advanceTimersByTimeAsync(600);
+    const sent = JSON.parse(JSON.stringify(vi.mocked(saveSet).mock.calls[0][2]));
+    workspace.state.draft!.description = "请求过程中输入的新内容";
+    finish({
+      set: { id: 12, name: sent.name, currentVersionId: 1, publishedVersionId: 0 },
+      version: { id: 1, setId: 12, publishedAt: null, definition: sent }
+    });
+    await flush();
+    expect(workspace.state.draft!.description).toBe("请求过程中输入的新内容");
+    expect(workspace.dirty.value).toBe(true);
+    await vi.advanceTimersByTimeAsync(600);
+    expect(saveSet).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(saveSet).mock.calls[1][1]).toBe(1);
+    expect(workspace.dirty.value).toBe(false);
+  });
+  it("flushes pending edits before leaving, but stays on the page if saving fails", async () => {
+    const router = await mount();
+    workspace.state.draft!.name = "马上离开";
+    vi.mocked(saveSet).mockRejectedValueOnce(new Error("离线"));
+    await router.push("/outside");
+    expect(router.currentRoute.value.path).toBe("/choice/overview");
+    expect(workspace.state.draft!.name).toBe("马上离开");
+    await router.push("/outside");
+    expect(router.currentRoute.value.path).toBe("/outside");
+    expect(saveSet).toHaveBeenCalledTimes(2);
   });
 });

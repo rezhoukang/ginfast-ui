@@ -158,7 +158,7 @@ function remove(i: number) {
       width="min(760px,94vw)"
       :mask-closable="true"
       :on-before-ok="apply"
-      ok-text="应用到草稿"
+      ok-text="确认"
     >
       <a-form :model="form" auto-label-width
         ><a-form-item label="编号" required><a-input v-model="form.code" :max-length="32" /></a-form-item

@@ -84,12 +84,12 @@ function download() {
   <a-button @click="openJSON">JSON 导入 / 编辑</a-button><a-button @click="download">导出题集</a-button>
   <a-modal v-model:visible="jsonVisible" title="题集 JSON 编辑" width="min(960px,94vw)" :footer="false" :mask-closable="true"
     ><a-space direction="vertical" fill :size="16"
-      ><a-alert>应用后保留为未保存草稿，其他视图同步更新。</a-alert
+      ><a-alert>确认后自动保存，其他视图同步更新。</a-alert
       ><a-textarea v-model="jsonText" :auto-size="{ minRows: 16, maxRows: 24 }" aria-label="题集 JSON" /><a-alert
         v-if="jsonError"
         type="error"
         >{{ jsonError }}</a-alert
-      ><a-button type="primary" @click="applyJSON">应用到草稿</a-button></a-space
+      ><a-button type="primary" @click="applyJSON">确认</a-button></a-space
     ></a-modal
   >
 </template>

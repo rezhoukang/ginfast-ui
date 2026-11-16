@@ -35,7 +35,7 @@ function applyOptions() {
     width="min(1120px,94vw)"
     :mask-closable="true"
     :on-before-ok="applyOptions"
-    ok-text="应用到草稿"
+    ok-text="确认"
     :footer="!optionEditing"
     unmount-on-close
   >

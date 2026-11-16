@@ -1,6 +1,7 @@
 import { computed, inject, onBeforeUnmount, provide, reactive, watch, type InjectionKey } from "vue";
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
 import { Message, Modal } from "@arco-design/web-vue";
+import { isAxiosError } from "axios";
 import { getSet, saveSet, publishSet, archiveSet, type Definition, type Detail } from "../api/choice";
 import { draftIssues, type DraftIssue } from "./readiness";
 import { queryText, resolveView, workspaceKey, isChoicePath, viewPath, type ChoiceView } from "./navigation";
@@ -15,7 +16,10 @@ export function blankDefinition(): Definition {
     rules: []
   };
 }
-export const describeError = (error: unknown) => (error instanceof Error ? error.message : "请求失败，请稍后重试");
+export const describeError = (error: unknown) => {
+  if (isAxiosError(error) && typeof error.response?.data?.message === "string") return error.response.data.message;
+  return error instanceof Error ? error.message : "请求失败，请稍后重试";
+};
 
 function createState() {
   return reactive({
@@ -27,6 +31,7 @@ function createState() {
     pendingKey: "",
     busy: false,
     error: "",
+    saveFailed: false,
     showIssues: false,
     editorOwner: undefined as symbol | undefined,
     editorOpen: false,
@@ -38,13 +43,23 @@ function createState() {
 // so navigating the framework's separate menu pages does not lose edits.
 const sessions: WeakMap<object, ReturnType<typeof createState>> = import.meta.hot?.data.choiceSessions || new WeakMap();
 if (import.meta.hot) import.meta.hot.data.choiceSessions = sessions;
+// Cached menu views share one timer, so one edit creates only one version.
+const saveQueues = new WeakMap<object, { timer?: ReturnType<typeof setTimeout>; failed: string }>();
 function createWorkspace() {
   const route = useRoute();
   const router = useRouter();
 
   if (!sessions.has(router)) sessions.set(router, createState());
   const state = sessions.get(router)!;
+  if (!saveQueues.has(state)) saveQueues.set(state, { failed: "" });
+  const queue = saveQueues.get(state)!;
+  function cancelAutoSave() {
+    clearTimeout(queue.timer);
+    queue.timer = undefined;
+  }
   function reset() {
+    cancelAutoSave();
+    queue.failed = "";
     const generation = state.generation + 1;
     Object.assign(state, createState(), { generation });
   }
@@ -75,8 +90,10 @@ function createWorkspace() {
         return { path: to.path, query: { ...to.query, set: state.loadedKey } };
       if (state.busy) return target === state.loadedKey && !dirty.value;
       if (!target || target === state.loadedKey || target === state.pendingKey) return await confirmDiscard(true);
+      if (dirty.value && !state.editorOpen && !(await persist(false, true, false))) return false;
       return !state.busy && (await confirmDiscard());
     }
+    if (dirty.value && !state.busy && !state.editorOpen && !(await persist(false, true, false))) return false;
     if (state.busy || !(await confirmDiscard())) return false;
     reset();
     return true;
@@ -95,6 +112,8 @@ function createWorkspace() {
     state.current = detail;
     state.draft = JSON.parse(JSON.stringify(detail.version.definition));
     state.baseline = JSON.stringify(state.draft);
+    state.saveFailed = false;
+    queue.failed = "";
   }
   async function run(action: () => Promise<void>) {
     if (state.busy) return;
@@ -118,11 +137,14 @@ function createWorkspace() {
       state.baseline = "";
       state.loadedKey = "";
       state.error = "";
+      state.saveFailed = false;
       state.pendingKey = key;
       const generation = state.generation;
       await run(async () => {
-        if (queryText(route.query.set) === "new") state.draft = blankDefinition();
-        else {
+        if (queryText(route.query.set) === "new") {
+          state.draft = blankDefinition();
+          state.baseline = JSON.stringify(state.draft);
+        } else {
           const id = Number(queryText(route.query.set));
           if (!Number.isSafeInteger(id) || id < 1) throw new Error("题集编号无效");
           const detail = await getSet(id);
@@ -174,39 +196,84 @@ function createWorkspace() {
       if (!(await confirmDiscard())) return;
       state.draft = blankDefinition();
       state.current = undefined;
-      state.baseline = "";
+      state.baseline = JSON.stringify(state.draft);
       state.showIssues = false;
       state.error = "";
     }
     return openContent("new", "overview");
   }
-  async function persist(startTest = false) {
+  async function persist(startTest = false, automatic = false, updateRoute = true) {
     if (!state.draft || state.busy || state.editorOpen) return false;
-    state.showIssues = true;
-    if (issues.value.length) return false;
+    cancelAutoSave();
+    if (startTest) {
+      state.showIssues = true;
+      if (issues.value.length) return false;
+    }
     if (state.current && !dirty.value) {
       if (startTest) await navigate("preview", { test: "1" });
       return true;
     }
     let saved = false;
+    const snapshot = JSON.stringify(state.draft);
+    const generation = state.generation;
     await run(async () => {
-      const detail = await saveSet(state.current?.set.id, state.current?.version.id || 0, state.draft!);
-      install(detail);
+      let detail: Detail;
+      try {
+        detail = await saveSet(state.current?.set.id, state.current?.version.id || 0, JSON.parse(snapshot));
+      } catch (e) {
+        queue.failed = snapshot;
+        state.saveFailed = true;
+        throw new Error(`保存失败，修改仍保留在当前页面：${describeError(e)}`);
+      }
+      if (generation !== state.generation) return;
+      // Do not overwrite edits made while this request was in flight.
+      if (JSON.stringify(state.draft) === snapshot) install(detail);
+      else {
+        state.current = detail;
+        state.baseline = snapshot;
+        state.saveFailed = false;
+        queue.failed = "";
+      }
       state.loadedKey = String(detail.set.id);
-      await router.replace({
-        path: startTest ? viewPath("preview") : route.path,
-        query: { ...(startTest ? { test: "1" } : route.query), set: String(detail.set.id) }
-      });
+      if (updateRoute) {
+        await router.replace({
+          path: startTest ? viewPath("preview") : route.path,
+          query: { ...(startTest ? { test: "1" } : route.query), set: String(detail.set.id) }
+        });
+      }
       state.showIssues = false;
       saved = true;
-      Message.success("草稿已保存");
+      if (!automatic) Message.success("保存成功");
     });
     return saved;
   }
   const save = () => persist();
+  watch(
+    () => [JSON.stringify(state.draft), state.loadedKey, state.pendingKey, state.busy, state.editorOpen] as const,
+    ([snapshot]) => {
+      cancelAutoSave();
+      if (
+        !isChoicePath(route.path) ||
+        !state.draft ||
+        !state.loadedKey ||
+        state.pendingKey ||
+        state.busy ||
+        state.editorOpen ||
+        !dirty.value
+      )
+        return;
+      // Opening a new, untouched form must not create an empty set by itself.
+      if (state.loadedKey === "new" && snapshot === JSON.stringify(blankDefinition())) return;
+      if (snapshot === queue.failed) return;
+      queue.timer = setTimeout(() => {
+        if (isChoicePath(route.path)) void persist(false, true);
+      }, 600);
+    },
+    { immediate: true, flush: "post" }
+  );
   const startPreview = () => persist(true);
   async function publish() {
-    if (!state.current || dirty.value) return;
+    if (!state.current || dirty.value || issues.value.length) return;
     await run(async () => {
       install(await publishSet(state.current!.set.id, state.current!.version.id));
       Message.success("题集已发布");
