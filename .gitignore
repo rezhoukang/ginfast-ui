@@ -35,7 +35,6 @@ CLAUDE.md
 # src/plugins directory
 src/plugins/*/
 !src/plugins/example/
-!src/plugins/choice/
 /plans
 /AGENTS.md
 /.history
