@@ -1,24 +1,18 @@
 <template>
   <template v-for="item in props.routeTree" :key="item.path">
-    <a-menu-item
-      v-if="menuShow(item) && choiceMenuLocked(item.path, selectedChoiceId)"
-      :key="item.path"
-      disabled
-      title="请先在题集列表选择题集"
-    >
-      <template #icon v-if="item.meta.svgIcon || item.meta.icon">
-        <MenuItemIcon :svg-icon="item.meta.svgIcon" :icon="item.meta.icon" />
-      </template>
-      <span>{{ $t(`menu.${item.meta.title}`) }}</span>
-    </a-menu-item>
-    <a-sub-menu v-else-if="menuShow(item)" :key="item.path">
+    <a-sub-menu v-if="menuShow(item)" :key="item.path">
       <template #icon v-if="item.meta.svgIcon || item.meta.icon">
         <MenuItemIcon :svg-icon="item.meta.svgIcon" :icon="item.meta.icon" />
       </template>
       <template #title>{{ $t(`menu.${item.meta.title}`) }}</template>
       <MenuItem :route-tree="item.children || []" />
     </a-sub-menu>
-    <a-menu-item v-else-if="aMenuShow(item)" :key="item?.path">
+    <a-menu-item
+      v-else-if="aMenuShow(item)"
+      :key="item?.path"
+      :disabled="choiceMenuLocked(item.path, selectedChoiceId)"
+      :title="choiceMenuLocked(item.path, selectedChoiceId) ? '请先在题集列表选择题集' : undefined"
+    >
       <template #icon v-if="item.meta.svgIcon || item.meta.icon">
         <MenuItemIcon :svg-icon="item.meta.svgIcon" :icon="item.meta.icon" />
       </template>

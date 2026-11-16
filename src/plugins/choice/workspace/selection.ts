@@ -10,5 +10,5 @@ export function choiceSelection(router: object) {
 }
 
 export function choiceMenuLocked(path: string, selectedId: number | undefined) {
-  return path === "/choice/question-management" && !selectedId;
+  return ["/choice/dimensions", "/choice/rules"].includes(path) && !selectedId;
 }

@@ -97,10 +97,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("Choice framework page navigation", () => {
-  it("selects a set on the list and unlocks the question directory only after loading succeeds", async () => {
+  it("selects a set on the list and unlocks variable and result menus only after loading succeeds", async () => {
     const router = await mount("/choice/sets");
     const selection = choiceSelection(router);
-    expect(choiceMenuLocked("/choice/question-management", selection.value)).toBe(true);
+    expect(choiceMenuLocked("/choice/question-management", selection.value)).toBe(false);
+    expect(choiceMenuLocked("/choice/questions", selection.value)).toBe(false);
+    expect(choiceMenuLocked("/choice/options", selection.value)).toBe(false);
+    expect(choiceMenuLocked("/choice/dimensions", selection.value)).toBe(true);
+    expect(choiceMenuLocked("/choice/rules", selection.value)).toBe(true);
     expect(choiceMenuLocked("/system", selection.value)).toBe(false);
     let finish!: (value: any) => void;
     vi.mocked(getSet).mockImplementationOnce(
@@ -119,14 +123,18 @@ describe("Choice framework page navigation", () => {
     });
     await flush();
     expect(selection.value).toBe(5);
+    expect(choiceMenuLocked("/choice/dimensions", selection.value)).toBe(false);
+    expect(choiceMenuLocked("/choice/rules", selection.value)).toBe(false);
     expect(choiceMenuLocked("/choice/question-management", selection.value)).toBe(false);
     await router.push("/choice/questions");
     await flush();
     expect(router.currentRoute.value.query.set).toBe("5");
     workspace.reset();
     expect(selection.value).toBeUndefined();
+    expect(choiceMenuLocked("/choice/dimensions", selection.value)).toBe(true);
+    expect(choiceMenuLocked("/choice/rules", selection.value)).toBe(true);
   });
-  it("keeps the question directory locked when a linked set cannot be loaded", async () => {
+  it("keeps variable and result menus locked when a linked set cannot be loaded", async () => {
     vi.mocked(getSet).mockRejectedValueOnce(new Error("题集不存在"));
     const router = await mount("/choice/sets?set=999");
     expect(choiceSelection(router).value).toBeUndefined();
