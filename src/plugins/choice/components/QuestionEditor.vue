@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { Message, Modal } from "@arco-design/web-vue";
+import { Message } from "@arco-design/web-vue";
 import { optionIssue, validCode } from "../workspace/readiness";
 import type { Question } from "../api/choice";
 const questions = defineModel<Question[]>({ required: true });
@@ -13,7 +13,7 @@ function afterClose() {
 }
 const index = ref(-1);
 const form = ref<Question>({ code: "", title: "", kind: "single", required: true, options: [] });
-const kindNames = { single: "单选", multiple: "多选", boolean: "判断" };
+const kindNames = { single: "单选", multiple: "多选" };
 function edit(i = -1) {
   index.value = i;
   let code = questions.value.length + 1;
@@ -47,27 +47,6 @@ function apply() {
     createdCode.value = form.value.code;
   } else questions.value[index.value] = form.value;
   return true;
-}
-function changeKind(value: string | number | boolean | Record<string, unknown>) {
-  const kind = value as Question["kind"];
-  if (kind === form.value.kind) return;
-  const applyKind = () => {
-    form.value.kind = kind;
-    if (kind === "boolean")
-      form.value.options = [
-        { code: "0", text: "错误", value: false, effects: [] },
-        { code: "1", text: "正确", value: true, effects: [] }
-      ];
-    else form.value.options.forEach(o => delete o.value);
-  };
-  if (kind === "boolean" && form.value.options.some(o => o.text.trim() || o.effects.length || o.correct !== undefined))
-    Modal.confirm({
-      title: "切换为判断题？",
-      maskClosable: true,
-      content: "将重建 0 / 1 选项，当前选项及计分设置会被替换。",
-      onOk: applyKind
-    });
-  else applyKind();
 }
 function move(i: number, delta: number) {
   [questions.value[i], questions.value[i + delta]] = [questions.value[i + delta], questions.value[i]];
@@ -161,9 +140,8 @@ function move(i: number, delta: number) {
         >
         <a-form-item label="题目内容" required><a-textarea v-model="form.title" :max-length="2000" /></a-form-item>
         <a-form-item label="题型"
-          ><a-select :model-value="form.kind" @change="changeKind"
-            ><a-option value="single">单选</a-option><a-option value="multiple">多选</a-option
-            ><a-option value="boolean">判断</a-option></a-select
+          ><a-select v-model="form.kind"
+            ><a-option value="single">单选</a-option><a-option value="multiple">多选</a-option></a-select
           ></a-form-item
         >
         <a-form-item label="必答"><a-switch v-model="form.required" /></a-form-item> </a-form

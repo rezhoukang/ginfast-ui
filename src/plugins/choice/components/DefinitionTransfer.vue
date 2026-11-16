@@ -65,6 +65,14 @@ function applyJSON() {
       )
     )
       throw new Error("JSON结构无效，请以导出的题集格式为基础编辑");
+    // Import older exports as ordinary choices; scoring comes only from effects.
+    for (const q of d.questions) {
+      if ((q.kind as string) === "boolean") q.kind = "single";
+      for (const o of q.options) {
+        delete (o as unknown as Record<string, unknown>).correct;
+        delete (o as unknown as Record<string, unknown>).value;
+      }
+    }
     state.draft = d;
     jsonVisible.value = false;
   } catch (e) {

@@ -22,15 +22,13 @@ export interface Option {
   id?: number;
   code: string;
   text: string;
-  value?: boolean;
-  correct?: boolean;
   effects: Effect[];
 }
 export interface Question {
   id?: number;
   code: string;
   title: string;
-  kind: "single" | "multiple" | "boolean";
+  kind: "single" | "multiple";
   required: boolean;
   options: Option[];
 }
@@ -76,8 +74,6 @@ export interface Result {
   matches: { group: string; code: string; name: string; description: string }[];
   code: string;
   answered: number;
-  correctQuestions: number;
-  gradedQuestions: number;
 }
 export interface Attempt {
   id: number;

@@ -10,19 +10,6 @@ const baseline = ref("");
 const question = defineModel<Question>({ required: true });
 const props = defineProps<{ dimensions: Variable[]; focusCode?: string; focusRequest?: number }>();
 const emit = defineEmits<{ editing: [value: boolean] }>();
-const graded = computed(() => question.value.options.some(o => o.correct !== undefined));
-function setGraded(value: string | number | boolean) {
-  question.value.options.forEach(o => {
-    if (value) o.correct = o.correct === true;
-    else delete o.correct;
-  });
-}
-function setCorrect(code: string, value: boolean) {
-  question.value.options.forEach(o => {
-    if (question.value.kind !== "multiple") o.correct = o.code === code;
-    else if (o.code === code) o.correct = value;
-  });
-}
 const dimensionName = (code: string) => props.dimensions.find(d => d.code === code)?.name || code;
 const visible = ref(false);
 watch(visible, value => emit("editing", value));
@@ -58,7 +45,7 @@ function edit(i = -1) {
   if (!question.value) return;
   index.value = i;
   const code = codes.find(c => !question.value!.options.some(o => o.code === c));
-  if (i < 0 && (!code || question.value.kind === "boolean")) return;
+  if (i < 0 && !code) return;
   form.value = i < 0 ? { code: code!, text: "", effects: [] } : JSON.parse(JSON.stringify(question.value.options[i]));
   form.value.effects = form.value.effects.map(normalizeEffect);
   baseline.value = JSON.stringify(form.value);
@@ -94,7 +81,6 @@ function apply() {
     Message.warning("请选择本题集的基础变量；设为可填负数，增加和减少须填非负数");
     return false;
   }
-  if (graded.value && form.value.correct === undefined) form.value.correct = false;
   if (index.value < 0) question.value.options.push(form.value);
   else question.value.options[index.value] = form.value;
   visible.value = false;
@@ -114,7 +100,7 @@ function move(i: number, delta: number) {
           ><template v-if="question"
             ><a-tag>{{ question.code }}</a-tag
             ><a-typography-text>{{ question.title }}</a-typography-text
-            ><a-button type="primary" :disabled="question.kind === 'boolean' || question.options.length >= 28" @click="edit()"
+            ><a-button type="primary" :disabled="question.options.length >= 28" @click="edit()"
               ><template #icon><icon-plus /></template>新增选项</a-button
             ></template
           ></a-space
@@ -124,17 +110,6 @@ function move(i: number, delta: number) {
     </s-layout-tools>
     <a-alert v-if="!question" type="warning">未找到当前题目，请从题目列表的“选项管理”进入。</a-alert>
     <template v-else>
-      <a-space v-if="!visible" wrap>
-        <a-typography-text>判分方式</a-typography-text>
-        <a-switch :model-value="graded" checked-text="判对错" unchecked-text="不判对错" @change="setGraded" />
-        <a-typography-text type="secondary">{{
-          graded
-            ? question.kind === "multiple"
-              ? "勾选全部正确答案；必须全部选对才算答对。"
-              : "在下表选择一个正确答案。"
-            : "适合问卷测评，按选项操作更新题集变量。"
-        }}</a-typography-text>
-      </a-space>
       <a-table v-if="!visible" :data="question.options" :pagination="false" :bordered="{ wrapper: true, cell: true }"
         ><template #columns>
           <a-table-column
@@ -151,40 +126,6 @@ function move(i: number, delta: number) {
             title="选项内容"
             data-index="text"
           />
-          <a-table-column
-            align="center"
-            header-cell-class="choice-table-header"
-            :header-cell-style="{ textAlign: 'center' }"
-            v-if="graded"
-            title="正确答案"
-            :width="120"
-            ><template #cell="{ record }">
-              <a-checkbox
-                v-if="question.kind === 'multiple'"
-                :model-value="record.correct === true"
-                :aria-label="record.code + ' 为正确答案'"
-                @change="setCorrect(record.code, Boolean($event))"
-                >正确</a-checkbox
-              >
-              <a-radio
-                v-else
-                :model-value="question.options.find(o => o.correct)?.code"
-                :value="record.code"
-                :aria-label="record.code + ' 为正确答案'"
-                @change="setCorrect(record.code, true)"
-                >正确</a-radio
-              >
-            </template></a-table-column
-          >
-          <a-table-column
-            align="center"
-            header-cell-class="choice-table-header"
-            :header-cell-style="{ textAlign: 'center' }"
-            v-if="question.kind === 'boolean'"
-            title="判断值"
-            :width="90"
-            ><template #cell="{ record }">{{ record.value ? "1 / 真" : "0 / 假" }}</template></a-table-column
-          >
           <a-table-column
             align="center"
             header-cell-class="choice-table-header"
@@ -211,9 +152,7 @@ function move(i: number, delta: number) {
                 ><a-button size="small" :disabled="rowIndex === question.options.length - 1" @click="move(rowIndex, 1)"
                   >下移</a-button
                 ><a-popconfirm content="移除此选项？" @ok="question.options.splice(rowIndex, 1)"
-                  ><a-button size="small" status="danger" :disabled="question.kind === 'boolean' || question.options.length <= 2"
-                    >删除</a-button
-                  ></a-popconfirm
+                  ><a-button size="small" status="danger" :disabled="question.options.length <= 2">删除</a-button></a-popconfirm
                 ></a-space
               ></template
             ></a-table-column
@@ -224,7 +163,7 @@ function move(i: number, delta: number) {
         <a-typography-text bold>{{ index < 0 ? "新增选项" : "编辑选项 " + form.code }} · {{ question.code }}</a-typography-text>
         <a-form :model="form" auto-label-width>
           <a-form-item label="选项编号" required
-            ><a-select v-model="form.code" :disabled="question.kind === 'boolean'"
+            ><a-select v-model="form.code"
               ><a-option v-for="code in availableCodes" :key="code" :value="code">{{ code }}</a-option></a-select
             ></a-form-item
           >

@@ -15,16 +15,6 @@ export function optionIssue(q: Question): string {
   if (q.options.some(o => !o.text.trim())) return "还有选项未填写内容";
   if (new Set(q.options.map(o => o.code)).size !== q.options.length || q.options.some(o => !/^[a-z01]$/.test(o.code)))
     return "选项编号重复或无效";
-  if (
-    q.kind === "boolean" &&
-    (q.options.length !== 2 || q.options.some(o => !["0", "1"].includes(o.code) || o.value !== (o.code === "1")))
-  )
-    return "判断题需要 0 / 1 两个选项及对应真假值";
-  if (q.options.some(o => o.correct !== undefined)) {
-    const count = q.options.filter(o => o.correct === true).length;
-    if (q.options.some(o => typeof o.correct !== "boolean") || count === 0 || (q.kind !== "multiple" && count !== 1))
-      return q.kind === "multiple" ? "请选择正确答案，并统一设置判分方式" : "请选择唯一正确答案，并统一设置判分方式";
-  }
   return "";
 }
 

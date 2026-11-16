@@ -4,19 +4,20 @@ import type { Definition, Question } from "../api/choice";
 const question = (): Question => ({
   code: "Q1",
   title: "判断",
-  kind: "boolean",
+  kind: "single",
   required: true,
   options: [
-    { code: "0", text: "错误", value: false, correct: true, effects: [] },
-    { code: "1", text: "正确", value: true, correct: false, effects: [] }
+    { code: "0", text: "错误", effects: [] },
+    { code: "1", text: "正确", effects: [] }
   ]
 });
 describe("draft editing guidance", () => {
-  it("keeps boolean value separate from the correct answer", () => {
+  it("treats correct and incorrect labels as ordinary options", () => {
     const q = question();
     expect(optionIssue(q)).toBe("");
-    q.options[1].correct = true;
-    expect(optionIssue(q)).toContain("唯一正确答案");
+    q.options[0].code = "a";
+    q.options[1].code = "b";
+    expect(optionIssue(q)).toBe("");
     q.kind = "multiple";
     expect(optionIssue(q)).toBe("");
   });
