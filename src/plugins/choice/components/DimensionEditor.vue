@@ -106,22 +106,29 @@ function remove(i: number) {
     <a-table :data="dimensions" :pagination="false" :bordered="{ wrapper: true, cell: true }"
       ><template #columns>
         <a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="编号"
           data-index="code"
         /><a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="名称"
           data-index="name"
         /><a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="初始值 / 常数项"
           data-index="initial"
         />
-        <a-table-column header-cell-class="choice-table-header" :header-cell-style="{ textAlign: 'center' }" title="类型"
+        <a-table-column
+          align="center"
+          header-cell-class="choice-table-header"
+          :header-cell-style="{ textAlign: 'center' }"
+          title="类型"
           ><template #cell="{ record }"
             ><a-tag :color="record.terms.length ? 'purple' : 'blue'">{{
               record.terms.length ? "计算变量" : "基础变量"
@@ -129,6 +136,7 @@ function remove(i: number) {
           ></a-table-column
         >
         <a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="操作"
@@ -164,6 +172,7 @@ function remove(i: number) {
             <a-table :data="form.terms" :pagination="false"
               ><template #columns
                 ><a-table-column
+                  align="center"
                   header-cell-class="choice-table-header"
                   :header-cell-style="{ textAlign: 'center' }"
                   title="基础变量"
@@ -177,9 +186,14 @@ function remove(i: number) {
                       ></a-select
                     ></template
                   ></a-table-column
-                ><a-table-column header-cell-class="choice-table-header" :header-cell-style="{ textAlign: 'center' }" title="系数"
+                ><a-table-column
+                  align="center"
+                  header-cell-class="choice-table-header"
+                  :header-cell-style="{ textAlign: 'center' }"
+                  title="系数"
                   ><template #cell="{ record }"><a-input-number v-model="record.weight" /></template></a-table-column
                 ><a-table-column
+                  align="center"
                   header-cell-class="choice-table-header"
                   :header-cell-style="{ textAlign: 'center' }"
                   title="操作"

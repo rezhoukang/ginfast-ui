@@ -15,18 +15,22 @@ const label = (code: string) => props.dimensions?.find(d => d.code === code)?.na
     <a-table v-if="result.matches.length" :data="result.matches" :pagination="false" :bordered="{ cell: true }"
       ><template #columns
         ><a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="分组"
           data-index="group" /><a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="结果"
           data-index="code" /><a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="名称"
           data-index="name" /><a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="解释"

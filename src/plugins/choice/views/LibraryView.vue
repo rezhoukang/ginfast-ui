@@ -43,23 +43,30 @@ onMounted(load);
     >
       <template #columns
         ><a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="ID"
           data-index="id"
           :width="80"
         /><a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="题集名称"
           data-index="name"
         /><a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="草稿版本"
           data-index="currentVersionId"
         />
-        <a-table-column header-cell-class="choice-table-header" :header-cell-style="{ textAlign: 'center' }" title="发布状态"
+        <a-table-column
+          align="center"
+          header-cell-class="choice-table-header"
+          :header-cell-style="{ textAlign: 'center' }"
+          title="发布状态"
           ><template #cell="{ record }"
             ><a-tag :color="record.publishedVersionId ? 'green' : 'gray'">{{
               record.publishedVersionId ? "已发布 · " + record.publishedVersionId : "未发布"
@@ -70,6 +77,7 @@ onMounted(load);
           ></a-table-column
         >
         <a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="操作"

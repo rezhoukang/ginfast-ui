@@ -66,31 +66,40 @@ function move(i: number, delta: number) {
     <a-table :data="rules" :pagination="false" :bordered="{ wrapper: true, cell: true }"
       ><template #columns>
         <a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="顺序"
           :width="70"
           ><template #cell="{ rowIndex }">{{ rowIndex + 1 }}</template></a-table-column
         ><a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="分组"
           data-index="group"
         /><a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="输出编号"
           data-index="code"
         /><a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="结论名称"
           data-index="name"
         />
-        <a-table-column header-cell-class="choice-table-header" :header-cell-style="{ textAlign: 'center' }" title="条件"
+        <a-table-column
+          align="center"
+          header-cell-class="choice-table-header"
+          :header-cell-style="{ textAlign: 'center' }"
+          title="条件"
           ><template #cell="{ record }">{{ expression(record) }}</template></a-table-column
         >
         <a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="操作"
@@ -129,7 +138,11 @@ function move(i: number, delta: number) {
           ><a-space direction="vertical" fill
             ><a-table :data="form.conditions" :pagination="false"
               ><template #columns>
-                <a-table-column header-cell-class="choice-table-header" :header-cell-style="{ textAlign: 'center' }" title="变量"
+                <a-table-column
+                  align="center"
+                  header-cell-class="choice-table-header"
+                  :header-cell-style="{ textAlign: 'center' }"
+                  title="变量"
                   ><template #cell="{ record }"
                     ><a-select v-model="record.dimension"
                       ><a-option v-for="d in dimensions" :key="d.code" :value="d.code"
@@ -139,6 +152,7 @@ function move(i: number, delta: number) {
                   ></a-table-column
                 >
                 <a-table-column
+                  align="center"
                   header-cell-class="choice-table-header"
                   :header-cell-style="{ textAlign: 'center' }"
                   title="比较"
@@ -152,6 +166,7 @@ function move(i: number, delta: number) {
                   ></a-table-column
                 >
                 <a-table-column
+                  align="center"
                   header-cell-class="choice-table-header"
                   :header-cell-style="{ textAlign: 'center' }"
                   title="比较对象"
@@ -165,6 +180,7 @@ function move(i: number, delta: number) {
                   ></a-table-column
                 >
                 <a-table-column
+                  align="center"
                   header-cell-class="choice-table-header"
                   :header-cell-style="{ textAlign: 'center' }"
                   title="阈值"
@@ -172,6 +188,7 @@ function move(i: number, delta: number) {
                   ><template #cell="{ record }"
                     ><a-input-number v-model="record.value" :disabled="!!record.compareTo" /></template></a-table-column
                 ><a-table-column
+                  align="center"
                   header-cell-class="choice-table-header"
                   :header-cell-style="{ textAlign: 'center' }"
                   title="操作"

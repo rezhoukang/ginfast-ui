@@ -88,24 +88,28 @@ function move(i: number, delta: number) {
     <a-table :data="questions" :pagination="false" :bordered="{ wrapper: true, cell: true }"
       ><template #columns>
         <a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="编号"
           data-index="code"
           :width="90"
         /><a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="题目"
           data-index="title"
         />
         <a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="题型"
           :width="80"
           ><template #cell="{ record }">{{ kindNames[record.kind as Question["kind"]] }}</template></a-table-column
         ><a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="选项状态"
@@ -116,6 +120,7 @@ function move(i: number, delta: number) {
             ></template
           ></a-table-column
         ><a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="必答"
@@ -123,6 +128,7 @@ function move(i: number, delta: number) {
           ><template #cell="{ record }">{{ record.required ? "是" : "否" }}</template></a-table-column
         >
         <a-table-column
+          align="center"
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
           title="操作"
