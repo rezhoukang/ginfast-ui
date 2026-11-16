@@ -5,7 +5,7 @@ import { viewTitles } from "../workspace/navigation";
 const { state, issues, fixIssue, view, save } = provideChoice();
 const views = {
   library: defineAsyncComponent(() => import("./LibraryView.vue")),
-  overview: defineAsyncComponent(() => import("./OverviewView.vue")),
+  overview: defineAsyncComponent(() => import("./LibraryView.vue")),
   questions: defineAsyncComponent(() => import("./QuestionsView.vue")),
   options: defineAsyncComponent(() => import("./OptionsView.vue")),
   dimensions: defineAsyncComponent(() => import("./DimensionsView.vue")),
@@ -14,7 +14,7 @@ const views = {
   history: defineAsyncComponent(() => import("./HistoryView.vue")),
   take: defineAsyncComponent(() => import("./TakeView.vue"))
 };
-const editing = computed(() => !["library", "history", "take"].includes(view.value));
+const editing = computed(() => !["library", "overview", "history", "take"].includes(view.value));
 </script>
 <template>
   <div class="snow-page">

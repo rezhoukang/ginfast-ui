@@ -115,6 +115,9 @@ function createWorkspace() {
     state.saveFailed = false;
     queue.failed = "";
   }
+  function acceptSaved(detail: Detail) {
+    if (state.loadedKey === String(detail.set.id)) install(detail);
+  }
   async function run(action: () => Promise<void>) {
     if (state.busy) return;
     state.busy = true;
@@ -292,6 +295,7 @@ function createWorkspace() {
   }
   return {
     state,
+    acceptSaved,
     reset,
     dirty,
     issues,

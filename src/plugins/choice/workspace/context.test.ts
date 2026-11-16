@@ -97,6 +97,25 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("Choice framework page navigation", () => {
+  it("refreshes the active set after list editing without replacing another set's draft", async () => {
+    const definition = blankDefinition();
+    const detail = {
+      set: { id: 5, name: definition.name, currentVersionId: 9, publishedVersionId: 0 },
+      version: { id: 9, setId: 5, publishedAt: null, definition }
+    };
+    vi.mocked(getSet).mockResolvedValue(detail);
+    await mount("/choice/questions?set=5");
+    workspace.acceptSaved({
+      ...detail,
+      version: { ...detail.version, id: 10, definition: { ...definition, name: "列表修改的名称" } }
+    });
+    expect(workspace.state.current!.version.id).toBe(10);
+    expect(workspace.state.draft!.name).toBe("列表修改的名称");
+    expect(workspace.dirty.value).toBe(false);
+    workspace.acceptSaved({ ...detail, set: { ...detail.set, id: 6 } });
+    expect(workspace.state.current!.set.id).toBe(5);
+    expect(workspace.state.current!.version.id).toBe(10);
+  });
   it("retains the same unsaved draft across menu pages and the set library", async () => {
     const router = await mount();
     workspace.state.draft!.name = "保留草稿";

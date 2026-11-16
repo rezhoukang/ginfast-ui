@@ -1,6 +1,6 @@
 export const viewTitles = {
   library: "题集管理",
-  overview: "题集设置",
+  overview: "编辑题集",
   questions: "题目管理",
   options: "选项管理",
   dimensions: "变量管理",

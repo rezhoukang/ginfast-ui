@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { validEffect } from "../workspace/effects";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import type { Definition } from "../api/choice";
-import { useChoice, describeError } from "../workspace/context";
-const { state } = useChoice();
+import { describeError } from "../workspace/context";
+const definition = defineModel<Definition>({ required: true });
+const emit = defineEmits<{ dirty: [value: boolean] }>();
 const jsonVisible = ref(false);
 const jsonText = ref("");
 const jsonError = ref("");
 function openJSON() {
-  jsonText.value = JSON.stringify(state.draft, null, 2);
+  jsonText.value = JSON.stringify(definition.value, null, 2);
   jsonError.value = "";
   jsonVisible.value = true;
 }
@@ -73,31 +74,37 @@ function applyJSON() {
         delete (o as unknown as Record<string, unknown>).value;
       }
     }
-    state.draft = d;
+    definition.value = d;
     jsonVisible.value = false;
+    return true;
   } catch (e) {
     jsonError.value = describeError(e);
+    return false;
   }
 }
 function download() {
-  const url = URL.createObjectURL(new Blob([JSON.stringify(state.draft, null, 2)], { type: "application/json" }));
+  const url = URL.createObjectURL(new Blob([JSON.stringify(definition.value, null, 2)], { type: "application/json" }));
   const a = document.createElement("a");
   a.href = url;
-  a.download = `choice-${state.current?.set.id || "draft"}.json`;
+  a.download = `choice-${definition.value.name || "draft"}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
+watch([jsonVisible, jsonText], () =>
+  emit("dirty", jsonVisible.value && jsonText.value !== JSON.stringify(definition.value, null, 2))
+);
+defineExpose({ prepare: () => !jsonVisible.value || applyJSON() });
 </script>
 <template>
-  <a-button @click="openJSON">JSON 导入 / 编辑</a-button><a-button @click="download">导出题集</a-button>
-  <a-modal v-model:visible="jsonVisible" title="题集 JSON 编辑" width="min(960px,94vw)" :footer="false" :mask-closable="true"
-    ><a-space direction="vertical" fill :size="16"
-      ><a-alert>确认后自动保存，其他视图同步更新。</a-alert
-      ><a-textarea v-model="jsonText" :auto-size="{ minRows: 16, maxRows: 24 }" aria-label="题集 JSON" /><a-alert
-        v-if="jsonError"
-        type="error"
-        >{{ jsonError }}</a-alert
-      ><a-button type="primary" @click="applyJSON">确认</a-button></a-space
-    ></a-modal
-  >
+  <a-space direction="vertical" fill :size="16">
+    <a-space><a-button @click="openJSON">JSON 导入 / 编辑</a-button><a-button @click="download">导出题集</a-button></a-space>
+    <template v-if="jsonVisible">
+      <a-textarea v-model="jsonText" :auto-size="{ minRows: 12, maxRows: 20 }" aria-label="题集 JSON" />
+      <a-alert v-if="jsonError" type="error">{{ jsonError }}</a-alert>
+      <a-space
+        ><a-button @click="jsonVisible = false">取消 JSON 编辑</a-button
+        ><a-button @click="applyJSON">应用 JSON</a-button></a-space
+      >
+    </template>
+  </a-space>
 </template>
