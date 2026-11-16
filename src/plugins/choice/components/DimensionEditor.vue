@@ -2,12 +2,12 @@
 import { ref, watch } from "vue";
 import { Message } from "@arco-design/web-vue";
 import { validCode } from "../workspace/readiness";
-import type { Definition, Dimension } from "../api/choice";
+import type { Definition, Variable } from "../api/choice";
 const props = defineProps<{ definition: Definition; focusCode?: string; focusRequest?: number }>();
-const dimensions = defineModel<Dimension[]>({ required: true });
+const dimensions = defineModel<Variable[]>({ required: true });
 const visible = ref(false);
 const index = ref(-1);
-const form = ref<Dimension>({ code: "", name: "", initial: 0, terms: [] });
+const form = ref<Variable>({ code: "", name: "", initial: 0, terms: [] });
 function edit(i = -1) {
   index.value = i;
   let code = dimensions.value.length + 1;
@@ -32,7 +32,7 @@ function apply() {
     return false;
   }
   if (dimensions.value.some((d, i) => i !== index.value && d.code === form.value.code)) {
-    Message.warning("维度编号不能重复");
+    Message.warning("变量编号不能重复");
     return false;
   }
   if (
@@ -41,12 +41,12 @@ function apply() {
     ) ||
     new Set(form.value.terms.map(t => t.dimension)).size !== form.value.terms.length
   ) {
-    Message.warning("请选择不重复的原始维度作为计算项");
+    Message.warning("请选择不重复的基础变量作为计算项");
     return false;
   }
   const previous = dimensions.value[index.value];
   if (previous && !previous.terms.length && form.value.terms.length && baseReferences(previous.code)) {
-    Message.warning("该原始维度被选项或派生指标使用，请先调整引用再更改类型");
+    Message.warning("该基础变量被选项或计算变量使用，请先调整引用再更改类型");
     return false;
   }
   if (previous && previous.code !== form.value.code) {
@@ -85,7 +85,7 @@ function remove(i: number) {
     baseReferences(code) ||
     props.definition.rules.some(r => r.conditions.some(c => c.dimension === code || c.compareTo === code))
   ) {
-    Message.warning("此维度仍被选项、派生指标或结果规则使用，请先调整引用");
+    Message.warning("此变量仍被选项、计算变量或结果规则使用，请先调整引用");
     return;
   }
   dimensions.value.splice(i, 1);
@@ -97,7 +97,7 @@ function remove(i: number) {
       <template #left
         ><a-space
           ><a-button type="primary" :disabled="dimensions.length >= 64" @click="edit()"
-            ><template #icon><icon-plus /></template>新增维度</a-button
+            ><template #icon><icon-plus /></template>新增变量</a-button
           ></a-space
         ></template
       >
@@ -124,7 +124,7 @@ function remove(i: number) {
         <a-table-column header-cell-class="choice-table-header" :header-cell-style="{ textAlign: 'center' }" title="类型"
           ><template #cell="{ record }"
             ><a-tag :color="record.terms.length ? 'purple' : 'blue'">{{
-              record.terms.length ? "派生指标" : "原始维度"
+              record.terms.length ? "计算变量" : "基础变量"
             }}</a-tag></template
           ></a-table-column
         >
@@ -136,7 +136,7 @@ function remove(i: number) {
           ><template #cell="{ rowIndex }"
             ><a-space
               ><a-button size="small" @click="edit(rowIndex)">编辑</a-button
-              ><a-popconfirm content="确认删除此维度？已被引用的维度会保留。" @ok="remove(rowIndex)"
+              ><a-popconfirm content="确认删除此变量？已被引用的变量会保留。" @ok="remove(rowIndex)"
                 ><a-button size="small" status="danger">删除</a-button></a-popconfirm
               ></a-space
             ></template
@@ -146,7 +146,7 @@ function remove(i: number) {
     >
     <a-modal
       v-model:visible="visible"
-      :title="index < 0 ? '新增维度' : '编辑维度'"
+      :title="index < 0 ? '新增变量' : '编辑变量'"
       width="min(760px,94vw)"
       :mask-closable="true"
       :on-before-ok="apply"
@@ -160,15 +160,15 @@ function remove(i: number) {
         /></a-form-item>
         <a-form-item label="派生计算"
           ><a-space direction="vertical" fill
-            ><a-alert>不添加计算项时为原始维度；添加后按“常数项 + 原始维度 × 权重”计算。</a-alert>
+            ><a-alert>不添加计算项时为基础变量；添加后按“常数项 + 基础变量 × 系数”计算。</a-alert>
             <a-table :data="form.terms" :pagination="false"
               ><template #columns
                 ><a-table-column
                   header-cell-class="choice-table-header"
                   :header-cell-style="{ textAlign: 'center' }"
-                  title="原始维度"
+                  title="基础变量"
                   ><template #cell="{ record }"
-                    ><a-select v-model="record.dimension" placeholder="选择原始维度"
+                    ><a-select v-model="record.dimension" placeholder="选择基础变量"
                       ><a-option
                         v-for="d in dimensions.filter((d, i) => i !== index && !d.terms.length)"
                         :key="d.code"
@@ -177,7 +177,7 @@ function remove(i: number) {
                       ></a-select
                     ></template
                   ></a-table-column
-                ><a-table-column header-cell-class="choice-table-header" :header-cell-style="{ textAlign: 'center' }" title="权重"
+                ><a-table-column header-cell-class="choice-table-header" :header-cell-style="{ textAlign: 'center' }" title="系数"
                   ><template #cell="{ record }"><a-input-number v-model="record.weight" /></template></a-table-column
                 ><a-table-column
                   header-cell-class="choice-table-header"

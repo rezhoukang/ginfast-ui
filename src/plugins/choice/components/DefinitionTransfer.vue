@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { validEffect } from "../workspace/effects";
 import { ref } from "vue";
 import type { Definition } from "../api/choice";
 import { useChoice, describeError } from "../workspace/context";
@@ -46,7 +47,7 @@ function applyJSON() {
               typeof o.code === "string" &&
               typeof o.text === "string" &&
               Array.isArray(o.effects) &&
-              o.effects.every(e => e && typeof e.dimension === "string" && typeof e.delta === "number")
+              o.effects.every(e => e && typeof e.dimension === "string" && validEffect(e))
           )
       ) ||
       !d.rules.every(

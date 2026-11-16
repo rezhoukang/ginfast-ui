@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { Dimension, Result } from "../api/choice";
-const props = defineProps<{ result: Result; attemptId?: number; dimensions?: Dimension[] }>();
+import type { Variable, Result } from "../api/choice";
+const props = defineProps<{ result: Result; attemptId?: number; dimensions?: Variable[] }>();
 const label = (code: string) => props.dimensions?.find(d => d.code === code)?.name || code;
 </script>
 <template>
@@ -32,7 +32,7 @@ const label = (code: string) => props.dimensions?.find(d => d.code === code)?.na
           title="解释"
           data-index="description" /></template
     ></a-table>
-    <a-descriptions title="原始维度" :column="4" bordered
+    <a-descriptions title="基础变量" :column="4" bordered
       ><a-descriptions-item v-for="(value, code) in result.dimensions" :key="code" :label="label(String(code))">{{
         Number(value.toFixed(4))
       }}</a-descriptions-item></a-descriptions

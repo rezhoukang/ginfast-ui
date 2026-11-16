@@ -3,8 +3,8 @@ export const viewTitles = {
   overview: "题集设置",
   questions: "题目管理",
   options: "选项管理",
-  dimensions: "维度配置",
-  rules: "结果规则",
+  dimensions: "变量管理",
+  rules: "组合结论",
   preview: "预览与发布",
   history: "历史答卷",
   take: "正式测评"

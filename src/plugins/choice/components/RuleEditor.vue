@@ -2,9 +2,9 @@
 import { ref, watch } from "vue";
 import { Message } from "@arco-design/web-vue";
 import { validCode } from "../workspace/readiness";
-import type { Dimension, Rule } from "../api/choice";
+import type { Variable, Rule } from "../api/choice";
 const rules = defineModel<Rule[]>({ required: true });
-const props = defineProps<{ dimensions: Dimension[]; focusCode?: string; focusRequest?: number }>();
+const props = defineProps<{ dimensions: Variable[]; focusCode?: string; focusRequest?: number }>();
 const visible = ref(false);
 const index = ref(-1);
 const form = ref<Rule>({ group: "result", code: "", name: "", description: "", mode: "all", conditions: [] });
@@ -34,12 +34,18 @@ function apply() {
     return false;
   }
   if (form.value.conditions.some(c => !c.dimension)) {
-    Message.warning("请选择每个条件的维度");
+    Message.warning("请选择每个条件的变量");
     return false;
   }
   if (index.value < 0) rules.value.push(form.value);
   else rules.value[index.value] = form.value;
   return true;
+}
+function expression(rule: Rule) {
+  if (!rule.conditions.length) return rule.mode === "all" ? "始终满足（兜底）" : "无条件，无法命中";
+  return rule.conditions
+    .map(c => `${c.dimension || "变量"} ${c.operator} ${c.compareTo || c.value}`)
+    .join(rule.mode === "all" ? " && " : " || ");
 }
 function move(i: number, delta: number) {
   [rules.value[i], rules.value[i + delta]] = [rules.value[i + delta], rules.value[i]];
@@ -51,7 +57,7 @@ function move(i: number, delta: number) {
       <template #left
         ><a-space
           ><a-button type="primary" :disabled="rules.length >= 256" @click="edit()"
-            ><template #icon><icon-plus /></template>新增规则</a-button
+            ><template #icon><icon-plus /></template>新增结论</a-button
           ></a-space
         ></template
       >
@@ -78,13 +84,11 @@ function move(i: number, delta: number) {
         /><a-table-column
           header-cell-class="choice-table-header"
           :header-cell-style="{ textAlign: 'center' }"
-          title="结果名称"
+          title="结论名称"
           data-index="name"
         />
         <a-table-column header-cell-class="choice-table-header" :header-cell-style="{ textAlign: 'center' }" title="条件"
-          ><template #cell="{ record }"
-            >{{ record.mode === "all" ? "全部满足" : "任意满足" }} · {{ record.conditions.length }} 项</template
-          ></a-table-column
+          ><template #cell="{ record }">{{ expression(record) }}</template></a-table-column
         >
         <a-table-column
           header-cell-class="choice-table-header"
@@ -106,7 +110,7 @@ function move(i: number, delta: number) {
     >
     <a-modal
       v-model:visible="visible"
-      :title="index < 0 ? '新增规则' : '编辑规则'"
+      :title="index < 0 ? '新增结论' : '编辑结论'"
       width="min(960px,94vw)"
       :mask-closable="true"
       :on-before-ok="apply"
@@ -114,18 +118,19 @@ function move(i: number, delta: number) {
       ><a-form :model="form" auto-label-width>
         <a-form-item label="结果分组" required><a-input v-model="form.group" :max-length="32" /></a-form-item
         ><a-form-item label="输出编号" required><a-input v-model="form.code" :max-length="32" /></a-form-item
-        ><a-form-item label="结果名称" required><a-input v-model="form.name" :max-length="120" /></a-form-item
-        ><a-form-item label="结果解释"><a-textarea v-model="form.description" :max-length="4000" /></a-form-item>
+        ><a-form-item label="结论名称" required><a-input v-model="form.name" :max-length="120" /></a-form-item
+        ><a-form-item label="结论说明"><a-textarea v-model="form.description" :max-length="4000" /></a-form-item>
         <a-form-item label="匹配方式"
           ><a-radio-group v-model="form.mode"
-            ><a-radio value="all">全部满足</a-radio><a-radio value="any">任意满足</a-radio></a-radio-group
+            ><a-radio value="all">全部满足（AND）</a-radio><a-radio value="any">任意满足（OR）</a-radio></a-radio-group
           ></a-form-item
         >
+        <a-alert>同一变量可以添加多个条件限定范围，例如 a &gt;= 2、a &lt;= 5、b &gt;= 1、b &lt;= 8，选择“全部满足”。</a-alert>
         <a-form-item label="条件"
           ><a-space direction="vertical" fill
             ><a-table :data="form.conditions" :pagination="false"
               ><template #columns>
-                <a-table-column header-cell-class="choice-table-header" :header-cell-style="{ textAlign: 'center' }" title="维度"
+                <a-table-column header-cell-class="choice-table-header" :header-cell-style="{ textAlign: 'center' }" title="变量"
                   ><template #cell="{ record }"
                     ><a-select v-model="record.dimension"
                       ><a-option v-for="d in dimensions" :key="d.code" :value="d.code"
@@ -181,6 +186,9 @@ function move(i: number, delta: number) {
               >新增条件</a-button
             ></a-space
           ></a-form-item
+        >
+        <a-form-item label="条件表达式"
+          ><a-typography-text code>{{ expression(form) }}</a-typography-text></a-form-item
         >
       </a-form></a-modal
     >

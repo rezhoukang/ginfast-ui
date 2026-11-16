@@ -1,13 +1,14 @@
 <script setup lang="ts">
+import { normalizeEffect, validEffect, effectText } from "../workspace/effects";
 import { computed, ref, watch, onBeforeUnmount } from "vue";
 import { Message } from "@arco-design/web-vue";
-import type { Dimension, Option, Question } from "../api/choice";
+import type { Variable, Option, Question } from "../api/choice";
 import { useChoice } from "../workspace/context";
 const { state } = useChoice();
 const owner = Symbol("option-editor");
 const baseline = ref("");
 const question = defineModel<Question>({ required: true });
-const props = defineProps<{ dimensions: Dimension[]; focusCode?: string; focusRequest?: number }>();
+const props = defineProps<{ dimensions: Variable[]; focusCode?: string; focusRequest?: number }>();
 const emit = defineEmits<{ editing: [value: boolean] }>();
 const graded = computed(() => question.value.options.some(o => o.correct !== undefined));
 function setGraded(value: string | number | boolean) {
@@ -59,6 +60,7 @@ function edit(i = -1) {
   const code = codes.find(c => !question.value!.options.some(o => o.code === c));
   if (i < 0 && (!code || question.value.kind === "boolean")) return;
   form.value = i < 0 ? { code: code!, text: "", effects: [] } : JSON.parse(JSON.stringify(question.value.options[i]));
+  form.value.effects = form.value.effects.map(normalizeEffect);
   baseline.value = JSON.stringify(form.value);
   visible.value = true;
 }
@@ -81,11 +83,15 @@ function apply() {
     return false;
   }
   if (form.value.effects.some(e => !e.dimension)) {
-    Message.warning("请选择每项计分影响的维度");
+    Message.warning("请选择每项操作引用的题集变量");
     return false;
   }
   if (new Set(form.value.effects.map(e => e.dimension)).size !== form.value.effects.length) {
-    Message.warning("同一维度请合并为一个增减项");
+    Message.warning("同一选项对同一变量只能配置一项操作");
+    return false;
+  }
+  if (form.value.effects.some(e => !validEffect(e) || !props.dimensions.some(d => d.code === e.dimension && !d.terms.length))) {
+    Message.warning("请选择本题集的基础变量；设为可填负数，增加和减少须填非负数");
     return false;
   }
   if (graded.value && form.value.correct === undefined) form.value.correct = false;
@@ -126,7 +132,7 @@ function move(i: number, delta: number) {
             ? question.kind === "multiple"
               ? "勾选全部正确答案；必须全部选对才算答对。"
               : "在下表选择一个正确答案。"
-            : "适合问卷测评，仅按选项增减维度分数。"
+            : "适合问卷测评，按选项操作更新题集变量。"
         }}</a-typography-text>
       </a-space>
       <a-table v-if="!visible" :data="question.options" :pagination="false" :bordered="{ wrapper: true, cell: true }"
@@ -175,11 +181,11 @@ function move(i: number, delta: number) {
             :width="90"
             ><template #cell="{ record }">{{ record.value ? "1 / 真" : "0 / 假" }}</template></a-table-column
           >
-          <a-table-column header-cell-class="choice-table-header" :header-cell-style="{ textAlign: 'center' }" title="维度增减"
+          <a-table-column header-cell-class="choice-table-header" :header-cell-style="{ textAlign: 'center' }" title="变量操作"
             ><template #cell="{ record }"
               ><a-space wrap
                 ><a-tag v-for="effect in record.effects" :key="effect.dimension"
-                  >{{ dimensionName(effect.dimension) }} {{ effect.delta >= 0 ? "+" : "" }}{{ effect.delta }}</a-tag
+                  >{{ dimensionName(effect.dimension) }} {{ effectText(effect) }}</a-tag
                 ><a-typography-text v-if="!record.effects.length" type="secondary">未设置</a-typography-text></a-space
               ></template
             ></a-table-column
@@ -214,16 +220,16 @@ function move(i: number, delta: number) {
             ></a-form-item
           >
           <a-form-item label="选项内容" required><a-textarea v-model="form.text" :max-length="2000" /></a-form-item>
-          <a-form-item label="维度增减"
+          <a-form-item label="变量操作"
             ><a-space direction="vertical" fill
               ><a-table :data="form.effects" :pagination="false"
                 ><template #columns>
                   <a-table-column
                     header-cell-class="choice-table-header"
                     :header-cell-style="{ textAlign: 'center' }"
-                    title="原始维度"
+                    title="基础变量"
                     ><template #cell="{ record }"
-                      ><a-select v-model="record.dimension" placeholder="选择维度"
+                      ><a-select v-model="record.dimension" placeholder="选择变量"
                         ><a-option v-for="d in dimensions.filter(d => !d.terms.length)" :key="d.code" :value="d.code"
                           >{{ d.name }} ({{ d.code }})</a-option
                         ></a-select
@@ -233,9 +239,27 @@ function move(i: number, delta: number) {
                   <a-table-column
                     header-cell-class="choice-table-header"
                     :header-cell-style="{ textAlign: 'center' }"
-                    title="增减量"
+                    title="执行操作"
+                  >
+                    <template #cell="{ record }"
+                      ><a-select
+                        v-model="record.operation"
+                        @change="record.operation !== 'set' && (record.value = Math.abs(record.value || 0))"
+                      >
+                        <a-option value="set">设为</a-option><a-option value="add">增加</a-option
+                        ><a-option value="subtract">减少</a-option>
+                      </a-select></template
+                    >
+                  </a-table-column>
+                  <a-table-column
+                    header-cell-class="choice-table-header"
+                    :header-cell-style="{ textAlign: 'center' }"
+                    title="数值"
                     ><template #cell="{ record }"
-                      ><a-input-number v-model="record.delta" :min="-1000000" :max="1000000" /></template
+                      ><a-input-number
+                        v-model="record.value"
+                        :min="record.operation === 'set' ? -1000000 : 0"
+                        :max="1000000" /></template
                   ></a-table-column>
                   <a-table-column
                     header-cell-class="choice-table-header"
@@ -252,11 +276,14 @@ function move(i: number, delta: number) {
                 @click="
                   form.effects.push({
                     dimension: dimensions.find(d => !d.terms.length && !form.effects.some(e => e.dimension === d.code))!.code,
-                    delta: 1
+                    operation: 'add',
+                    value: 1
                   })
                 "
-                >添加维度增减</a-button
-              ><a-typography-text type="secondary">正数加分，负数减分；不设置则不影响维度。</a-typography-text></a-space
+                >添加变量操作</a-button
+              ><a-typography-text type="secondary"
+                >选中时执行上述操作；设为会覆盖此前的值。不设置则不修改变量。按题目顺序执行，同题多选按选项顺序执行，与点击顺序无关。</a-typography-text
+              ></a-space
             ></a-form-item
           >
         </a-form>

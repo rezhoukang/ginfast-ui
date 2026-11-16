@@ -6,7 +6,7 @@ export interface Term {
   dimension: string;
   weight: number;
 }
-export interface Dimension {
+export interface Variable {
   code: string;
   name: string;
   initial: number;
@@ -14,7 +14,9 @@ export interface Dimension {
 }
 export interface Effect {
   dimension: string;
-  delta: number;
+  delta?: number; // Compatibility with existing signed increments.
+  operation?: "set" | "add" | "subtract";
+  value?: number;
 }
 export interface Option {
   id?: number;
@@ -50,7 +52,7 @@ export interface Definition {
   name: string;
   description: string;
   separator: string;
-  dimensions: Dimension[];
+  dimensions: Variable[];
   questions: Question[];
   rules: Rule[];
 }

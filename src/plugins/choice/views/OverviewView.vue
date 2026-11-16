@@ -16,12 +16,14 @@ const { state, archive, navigate, issues, fixIssue } = useChoice();
       /></a-form-item>
       <a-form-item label="内容配置">
         <a-space wrap>
-          <a-button @click="navigate('dimensions')">维度配置 · {{ state.draft.dimensions.length }}</a-button>
+          <a-button @click="navigate('dimensions')">变量管理 · {{ state.draft.dimensions.length }}</a-button>
           <a-button type="primary" @click="navigate('questions')">题目管理 · {{ state.draft.questions.length }}</a-button>
-          <a-button @click="navigate('rules')">结果规则 · {{ state.draft.rules.length }}</a-button>
+          <a-button @click="navigate('rules')">组合结论 · {{ state.draft.rules.length }}</a-button>
           <a-button @click="navigate('preview')">预览与发布</a-button>
         </a-space>
-        <template #help>先配置要统计的维度，再添加题目和选项；结果规则可选，不配置时直接输出各维度分数。</template>
+        <template #help
+          >题集统一定义变量、初始值和组合结论；题目下的选项引用这些变量执行设为、增加或减少。未配置结论时输出全部变量值。</template
+        >
       </a-form-item>
       <a-form-item label="发布状态"
         ><a-tag :color="state.current?.set.publishedVersionId ? 'green' : 'gray'">{{
