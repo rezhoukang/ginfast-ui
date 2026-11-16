@@ -19,7 +19,7 @@ const editing = computed(() => !["library", "history", "take"].includes(view.val
 <template>
   <div class="snow-page">
     <div class="snow-inner">
-      <a-card :bordered="false" :loading="state.busy">
+      <a-spin :loading="state.busy" style="width: 100%">
         <a-space direction="vertical" fill :size="16">
           <a-alert v-if="editing && state.showIssues && issues.length" type="warning">
             <template #title>还有 {{ issues.length }} 项待完善，点击直接处理</template>
@@ -33,7 +33,7 @@ const editing = computed(() => !["library", "history", "take"].includes(view.val
             ><a-alert>请先选择题集，再配置{{ viewTitles[view] }}。</a-alert><component :is="views.library"
           /></template>
         </a-space>
-      </a-card>
+      </a-spin>
     </div>
   </div>
 </template>
