@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { useChoicePagination } from "../workspace/pagination";
-import { choiceModalLayout } from "../workspace/modal";
+import { useChoicePagination } from "../hooks/useChoicePagination";
+import { choiceModalLayout } from "../config/modal";
 import { ref } from "vue";
 import { Message } from "@arco-design/web-vue";
-import { optionIssue, validCode } from "../workspace/readiness";
+import { optionIssue, validCode } from "../utils/readiness";
 import type { Question } from "../api/choice";
 const questions = defineModel<Question[]>({ required: true });
 const emit = defineEmits<{ options: [code: string] }>();

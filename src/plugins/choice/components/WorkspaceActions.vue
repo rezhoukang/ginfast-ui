@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useChoice } from "../workspace/context";
+import { useChoice } from "../hooks/useChoice";
 const { state } = useChoice();
 </script>
 <template>

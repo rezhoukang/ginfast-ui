@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import WorkspaceActions from "../components/WorkspaceActions.vue";
 import { computed } from "vue";
-import { useChoice } from "../workspace/context";
+import { useChoice } from "../hooks/useChoice";
 import AssessmentRunner from "../components/AssessmentRunner.vue";
 const { state, dirty, issues, fixIssue, route, publish, navigate, startPreview } = useChoice();
 const testing = computed(() => route.query.test === "1" && !dirty.value);

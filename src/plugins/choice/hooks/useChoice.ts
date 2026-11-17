@@ -1,57 +1,24 @@
-import { computed, inject, onBeforeUnmount, provide, reactive, watch, type InjectionKey } from "vue";
+import { computed, inject, onBeforeUnmount, provide, watch, type InjectionKey } from "vue";
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
 import { Message, Modal } from "@arco-design/web-vue";
-import { isAxiosError } from "axios";
-import { getSet, saveSet, publishSet, type Definition, type Detail } from "../api/choice";
-import { choiceModalLayout } from "./modal";
-import { draftIssues, type DraftIssue } from "./readiness";
-import { queryText, resolveView, workspaceKey, isChoicePath, viewPath, type ChoiceView } from "./navigation";
+import { useChoiceStore } from "../stores/choice";
+import { blankDefinition } from "../utils/definition";
+import { describeError } from "../utils/errors";
+import { getSet, saveSet, publishSet, type Detail } from "../api/choice";
+import { choiceModalLayout } from "../config/modal";
+import type { DraftIssue } from "../utils/readiness";
+import { queryText, resolveView, workspaceKey, isChoicePath, viewPath, type ChoiceView } from "../utils/navigation";
 
-export function blankDefinition(): Definition {
-  return {
-    name: "新题集",
-    description: "",
-    separator: "",
-    dimensions: [{ code: "score", name: "得分", initial: 0, terms: [] }],
-    questions: [],
-    rules: []
-  };
-}
-export const describeError = (error: unknown) => {
-  if (isAxiosError(error) && typeof error.response?.data?.message === "string") return error.response.data.message;
-  return error instanceof Error ? error.message : "请求失败，请稍后重试";
-};
-
-function createState() {
-  return reactive({
-    generation: 0,
-    current: undefined as Detail | undefined,
-    draft: undefined as Definition | undefined,
-    baseline: "",
-    loadedKey: "",
-    pendingKey: "",
-    busy: false,
-    error: "",
-    saveFailed: false,
-    showIssues: false,
-    editorOwner: undefined as symbol | undefined,
-    editorOpen: false,
-    editorDirty: false,
-    focusRequest: 0
-  });
-}
-// GinFast keys routed components by fullPath. Keep a single session per router
-// so navigating the framework's separate menu pages does not lose edits.
-const sessions: WeakMap<object, ReturnType<typeof createState>> = import.meta.hot?.data.choiceSessions || new WeakMap();
-if (import.meta.hot) import.meta.hot.data.choiceSessions = sessions;
 // Cached menu views share one timer, so one edit creates only one version.
 const saveQueues = new WeakMap<object, { timer?: ReturnType<typeof setTimeout>; failed: string }>();
-function createWorkspace() {
+function createChoiceController() {
   const route = useRoute();
   const router = useRouter();
 
-  if (!sessions.has(router)) sessions.set(router, createState());
-  const state = sessions.get(router)!;
+  const store = useChoiceStore();
+  const { state, resetState } = store;
+  const dirty = computed(() => store.dirty);
+  const issues = computed(() => store.issues);
   if (!saveQueues.has(state)) saveQueues.set(state, { failed: "" });
   const queue = saveQueues.get(state)!;
   function cancelAutoSave() {
@@ -61,11 +28,8 @@ function createWorkspace() {
   function reset() {
     cancelAutoSave();
     queue.failed = "";
-    const generation = state.generation + 1;
-    Object.assign(state, createState(), { generation });
+    resetState();
   }
-  const dirty = computed(() => !!state.draft && JSON.stringify(state.draft) !== state.baseline);
-  const issues = computed(() => (state.draft ? draftIssues(state.draft) : []));
   const view = computed(() => resolveView(route.path, route.query));
   async function confirmDiscard(localOnly = false) {
     if (!state.editorDirty && (localOnly || !dirty.value)) return true;
@@ -304,15 +268,15 @@ function createWorkspace() {
     run
   };
 }
-type Workspace = ReturnType<typeof createWorkspace>;
-const key: InjectionKey<Workspace> = Symbol.for("ginfast.choice.workspace");
+type ChoiceContext = ReturnType<typeof createChoiceController>;
+const key: InjectionKey<ChoiceContext> = Symbol.for("ginfast.choice.context");
 export function provideChoice() {
-  const workspace = createWorkspace();
-  provide(key, workspace);
-  return workspace;
+  const choice = createChoiceController();
+  provide(key, choice);
+  return choice;
 }
 export function useChoice() {
-  const workspace = inject(key);
-  if (!workspace) throw new Error("Choice workspace missing");
-  return workspace;
+  const choice = inject(key);
+  if (!choice) throw new Error("Choice context missing");
+  return choice;
 }

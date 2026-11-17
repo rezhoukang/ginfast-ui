@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { validEffect } from "../workspace/effects";
+import { validEffect } from "../utils/effects";
 import { ref, watch } from "vue";
 import type { Definition } from "../api/choice";
-import { describeError } from "../workspace/context";
+import { describeError } from "../utils/errors";
 const definition = defineModel<Definition>({ required: true });
 const emit = defineEmits<{ dirty: [value: boolean] }>();
 const jsonVisible = ref(false);

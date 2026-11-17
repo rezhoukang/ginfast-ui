@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from "vue";
-import { provideChoice } from "../workspace/context";
+import { provideChoice } from "../hooks/useChoice";
 const { state, issues, fixIssue, view, save, navigate } = provideChoice();
 const views = {
   library: defineAsyncComponent(() => import("./LibraryView.vue")),

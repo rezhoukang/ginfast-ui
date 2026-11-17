@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { getAttempt, type Attempt } from "../api/choice";
-import { useChoice, describeError } from "../workspace/context";
+import { describeError } from "../utils/errors";
+import { useChoice } from "../hooks/useChoice";
 import ResultSummary from "../components/ResultSummary.vue";
 const { route } = useChoice();
 const id = ref<number>();

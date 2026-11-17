@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { watch, ref } from "vue";
 import { playSet, type Detail } from "../api/choice";
-import { useChoice, describeError } from "../workspace/context";
+import { describeError } from "../utils/errors";
+import { useChoice } from "../hooks/useChoice";
 import AssessmentRunner from "../components/AssessmentRunner.vue";
 const { state, route, navigate } = useChoice();
 const detail = ref<Detail>();

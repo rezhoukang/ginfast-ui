@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { useChoicePagination } from "../workspace/pagination";
-import { choiceModalLayout } from "../workspace/modal";
+import { useChoicePagination } from "../hooks/useChoicePagination";
+import { choiceModalLayout } from "../config/modal";
 import { ref, watch } from "vue";
 import { Message } from "@arco-design/web-vue";
-import { validCode } from "../workspace/readiness";
+import { validCode } from "../utils/readiness";
 import type { Definition, Variable } from "../api/choice";
 const props = defineProps<{ definition: Definition; focusCode?: string; focusRequest?: number }>();
 const dimensions = defineModel<Variable[]>({ required: true });

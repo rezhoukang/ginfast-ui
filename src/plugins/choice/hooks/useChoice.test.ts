@@ -1,7 +1,9 @@
+import { createPinia } from "pinia";
 import { createRenderer, defineComponent, h, nextTick } from "vue";
 import { createMemoryHistory, createRouter, RouterView } from "vue-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { provideChoice, blankDefinition } from "./context";
+import { blankDefinition } from "../utils/definition";
+import { provideChoice } from "./useChoice";
 import { getSet, saveSet } from "../api/choice";
 import { Modal } from "@arco-design/web-vue";
 vi.mock("../api/choice", () => ({
@@ -68,6 +70,7 @@ async function mount(path = "/choice/overview?set=new") {
       }
     })
   );
+  app.use(createPinia());
   app.use(router);
   app.mount({});
   dispose = () => app.unmount();

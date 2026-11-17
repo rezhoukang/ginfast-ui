@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import WorkspaceActions from "../components/WorkspaceActions.vue";
 import { computed, ref } from "vue";
-import { useChoice } from "../workspace/context";
-import { queryText } from "../workspace/navigation";
+import { useChoice } from "../hooks/useChoice";
+import { queryText } from "../utils/navigation";
 import OptionEditor from "../components/OptionEditor.vue";
 const { state, route, openOptions, navigate } = useChoice();
 const editingOption = ref(false);

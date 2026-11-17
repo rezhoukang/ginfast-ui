@@ -1,6 +1,6 @@
 import { effectScope, ref } from "vue";
 import { describe, expect, it } from "vitest";
-import { useChoicePagination } from "./pagination";
+import { useChoicePagination } from "./useChoicePagination";
 
 describe("Choice draft pagination", () => {
   it("maps later-page edits and deletions to the full draft and clamps an emptied last page", () => {

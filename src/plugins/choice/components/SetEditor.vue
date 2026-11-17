@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { choiceModalLayout } from "../workspace/modal";
+import { choiceModalLayout } from "../config/modal";
 import { onBeforeUnmount, ref, watch } from "vue";
 import { Message } from "@arco-design/web-vue";
 import { getSet, saveSet, type Definition, type Detail } from "../api/choice";
-import { blankDefinition, describeError, useChoice } from "../workspace/context";
+import { blankDefinition } from "../utils/definition";
+import { describeError } from "../utils/errors";
+import { useChoice } from "../hooks/useChoice";
 import DefinitionTransfer from "./DefinitionTransfer.vue";
 const { state, dirty, save, acceptSaved } = useChoice();
 const emit = defineEmits<{ saved: [detail: Detail]; closed: [] }>();

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import WorkspaceActions from "../components/WorkspaceActions.vue";
-import { useChoice } from "../workspace/context";
+import { useChoice } from "../hooks/useChoice";
 import RuleEditor from "../components/RuleEditor.vue";
 const { state, route } = useChoice();
 </script>

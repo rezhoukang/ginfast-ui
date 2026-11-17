@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useChoicePagination } from "../workspace/pagination";
+import { useChoicePagination } from "../hooks/useChoicePagination";
 import type { Variable, Result } from "../api/choice";
 const props = defineProps<{ result: Result; attemptId?: number; dimensions?: Variable[] }>();
 const pages = useChoicePagination(() => props.result.matches.length);

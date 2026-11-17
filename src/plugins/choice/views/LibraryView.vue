@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
 import { deleteSet, setEnabled, listSets, type ChoiceSet } from "../api/choice";
-import { describeError, useChoice } from "../workspace/context";
+import { describeError } from "../utils/errors";
+import { useChoice } from "../hooks/useChoice";
 import { useRouter } from "vue-router";
 import SetEditor from "../components/SetEditor.vue";
 import WorkspaceActions from "../components/WorkspaceActions.vue";

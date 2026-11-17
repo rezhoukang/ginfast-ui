@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { choiceModalLayout } from "../workspace/modal";
+import { choiceModalLayout } from "../config/modal";
 import WorkspaceActions from "../components/WorkspaceActions.vue";
 import { ref } from "vue";
-import { useChoice } from "../workspace/context";
+import { useChoice } from "../hooks/useChoice";
 import type { Question } from "../api/choice";
 import QuestionEditor from "../components/QuestionEditor.vue";
 import OptionEditor from "../components/OptionEditor.vue";

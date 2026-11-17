@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { useChoicePagination } from "../workspace/pagination";
-import { normalizeEffect, validEffect, effectText } from "../workspace/effects";
+import { useChoicePagination } from "../hooks/useChoicePagination";
+import { normalizeEffect, validEffect, effectText } from "../utils/effects";
 import { computed, ref, watch, onBeforeUnmount } from "vue";
 import { Message } from "@arco-design/web-vue";
 import type { Variable, Option, Question } from "../api/choice";
-import { useChoice } from "../workspace/context";
+import { useChoice } from "../hooks/useChoice";
 const { state } = useChoice();
 const owner = Symbol("option-editor");
 const baseline = ref("");
