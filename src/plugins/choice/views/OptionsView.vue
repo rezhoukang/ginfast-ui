@@ -24,13 +24,13 @@ const questionIndex = computed(() => state.draft?.questions.findIndex(q => q.cod
       @editing="editingOption = $event"
       >
       <template #navigation>
-        <a-space wrap align="center" style="display: flex">
+        <a-space align="center" style="display: flex; height: 32px">
           <a-button
             :disabled="editingOption || questionIndex === 0"
             @click="openOptions(state.draft.questions[questionIndex - 1].code)"
             >上一题</a-button
           >
-          <span>{{ questionIndex + 1 }} / {{ state.draft.questions.length }}</span>
+          <span style="line-height: 32px">{{ questionIndex + 1 }} / {{ state.draft.questions.length }}</span>
           <a-button
             :disabled="editingOption || questionIndex === state.draft.questions.length - 1"
             @click="openOptions(state.draft.questions[questionIndex + 1].code)"
