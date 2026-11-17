@@ -101,22 +101,24 @@ function move(i: number, delta: number) {
 </script>
 <template>
   <a-space direction="vertical" fill :size="16">
-    <s-layout-tools v-if="!visible || $slots.actions">
-      <template #left>
-        <a-space wrap align="center">
-          <a-button v-if="!visible && question" type="primary" :disabled="question.options.length >= 28" @click="edit()">
-            <template #icon><icon-plus /></template>新增选项
-          </a-button>
+    <a-row v-if="!visible || $slots.actions" align="center" :wrap="false" :gutter="16">
+      <a-col flex="1" style="min-width: 0">
+        <a-button v-if="!visible && question" type="primary" :disabled="question.options.length >= 28" @click="edit()">
+          <template #icon><icon-plus /></template>新增选项
+        </a-button>
+      </a-col>
+      <a-col v-if="question && !visible" flex="none">
+        <a-space align="center">
+          <a-tag size="large">{{ question.code }}</a-tag>
+          <a-tooltip :content="question.title">
+            <span style="display: block; max-width: min(280px, 22vw); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 14px; line-height: 32px">{{ question.title }}</span>
+          </a-tooltip>
+          <slot name="navigation" />
         </a-space>
-      </template>
-      <template #right><slot name="actions" /></template>
-    </s-layout-tools>
-    <a-row v-if="question && !visible" justify="center">
-      <a-space wrap align="center">
-        <a-tag>{{ question.code }}</a-tag>
-        <a-typography-text>{{ question.title }}</a-typography-text>
-        <slot name="navigation" />
-      </a-space>
+      </a-col>
+      <a-col flex="1" style="min-width: 0; text-align: right">
+        <slot name="actions" />
+      </a-col>
     </a-row>
     <a-alert v-if="!question" type="warning">未找到当前题目，请从题目列表的“选项管理”进入。</a-alert>
     <template v-else>
