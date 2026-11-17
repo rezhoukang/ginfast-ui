@@ -1,13 +1,26 @@
 <script setup lang="ts">
 import { useChoicePagination } from "../hooks/useChoicePagination";
 import { choiceModalLayout } from "../config/modal";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { Message } from "@arco-design/web-vue";
 import { optionIssue, validCode } from "../utils/readiness";
 import type { Question } from "../api/choice";
 const questions = defineModel<Question[]>({ required: true });
 const emit = defineEmits<{ options: [code: string] }>();
 const visible = ref(false);
+const selectedKeys = ref<(string | number)[]>([]);
+watch(
+  () => questions.value.map(q => q.code),
+  codes => {
+    selectedKeys.value = selectedKeys.value.filter(key => codes.includes(String(key)));
+  }
+);
+function removeSelected() {
+  if (visible.value || !selectedKeys.value.length) return;
+  const codes = new Set(selectedKeys.value.map(String));
+  questions.value = questions.value.filter(question => !codes.has(question.code));
+  selectedKeys.value = [];
+}
 const createdCode = ref("");
 function afterClose() {
   if (createdCode.value) emit("options", createdCode.value);
@@ -61,15 +74,32 @@ function move(i: number, delta: number) {
   <a-space direction="vertical" fill :size="16">
     <s-layout-tools>
       <template #left
-        ><a-space
+        ><a-space wrap
           ><a-button type="primary" :disabled="questions.length >= 500" @click="edit()"
             ><template #icon><icon-plus /></template>新增题目</a-button
-          ></a-space
-        ></template
+          >
+          <a-popconfirm
+            :content="`确认删除勾选的${selectedKeys.length}道题目及其选项？`"
+            :disabled="visible || !selectedKeys.length"
+            @ok="removeSelected"
+          >
+            <a-button status="danger" :disabled="visible || !selectedKeys.length">删除</a-button>
+          </a-popconfirm>
+          <a-typography-text v-if="selectedKeys.length" type="secondary"
+            >已勾选 {{ selectedKeys.length }} 道题目</a-typography-text
+          >
+          <a-button v-if="selectedKeys.length" type="text" @click="selectedKeys = []">清空勾选</a-button>
+        </a-space></template
       >
       <template #right><slot name="actions" /></template>
     </s-layout-tools>
-    <a-table :data="questions" v-bind="pages.bindings" :bordered="{ wrapper: true, cell: true }"
+    <a-table
+      :data="questions"
+      v-bind="pages.bindings"
+      :bordered="{ wrapper: true, cell: true }"
+      row-key="code"
+      v-model:selected-keys="selectedKeys"
+      :row-selection="{ type: 'checkbox', showCheckedAll: true, onlyCurrent: false }"
       ><template #columns>
         <a-table-column
           align="center"
@@ -121,8 +151,13 @@ function move(i: number, delta: number) {
             ><a-space
               ><a-button size="small" @click="edit(pages.index(rowIndex))">编辑</a-button
               ><a-button size="small" @click="emit('options', questions[pages.index(rowIndex)].code)">选项管理</a-button
-              ><a-button size="small" :disabled="pages.index(rowIndex) === 0" @click="move(pages.index(rowIndex), -1)">上移</a-button
-              ><a-button size="small" :disabled="pages.index(rowIndex) === questions.length - 1" @click="move(pages.index(rowIndex), 1)">下移</a-button
+              ><a-button size="small" :disabled="pages.index(rowIndex) === 0" @click="move(pages.index(rowIndex), -1)"
+                >上移</a-button
+              ><a-button
+                size="small"
+                :disabled="pages.index(rowIndex) === questions.length - 1"
+                @click="move(pages.index(rowIndex), 1)"
+                >下移</a-button
               ><a-popconfirm content="移除此题目？" @ok="questions.splice(pages.index(rowIndex), 1)"
                 ><a-button size="small" status="danger">删除</a-button></a-popconfirm
               ></a-space
