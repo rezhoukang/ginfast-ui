@@ -101,20 +101,21 @@ function move(i: number, delta: number) {
 </script>
 <template>
   <a-space direction="vertical" fill :size="16">
-    <s-layout-tools v-if="!visible || $slots.actions">
-      <template #left
-        ><a-space v-if="!visible" wrap
-          ><template v-if="question"
-            ><a-tag>{{ question.code }}</a-tag
-            ><a-typography-text>{{ question.title }}</a-typography-text
-            ><a-button type="primary" :disabled="question.options.length >= 28" @click="edit()"
-              ><template #icon><icon-plus /></template>新增选项</a-button
-            ></template
-          ></a-space
-        ></template
-      >
+    <s-layout-tools v-if="!visible || $slots.actions || $slots.navigation">
+      <template #left>
+        <a-space wrap>
+          <a-button v-if="!visible && question" type="primary" :disabled="question.options.length >= 28" @click="edit()">
+            <template #icon><icon-plus /></template>新增选项
+          </a-button>
+          <slot name="navigation" />
+        </a-space>
+      </template>
       <template #right><slot name="actions" /></template>
     </s-layout-tools>
+    <a-space v-if="question && !visible" wrap>
+      <a-tag>{{ question.code }}</a-tag>
+      <a-typography-text>{{ question.title }}</a-typography-text>
+    </a-space>
     <a-alert v-if="!question" type="warning">未找到当前题目，请从题目列表的“选项管理”进入。</a-alert>
     <template v-else>
       <a-table v-if="!visible" :data="question.options" v-bind="pages.bindings" :bordered="{ wrapper: true, cell: true }"
