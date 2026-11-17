@@ -4,6 +4,6 @@ const { state } = useChoice();
 </script>
 <template>
   <a-space v-if="state.draft" wrap>
-    <a-tag>{{ state.draft.name }}</a-tag>
+    <a-tag>当前题集：{{ state.draft.name }}</a-tag>
   </a-space>
 </template>
