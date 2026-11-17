@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
+import { Message } from "@arco-design/web-vue";
 import { deleteSet, setEnabled, listSets, type ChoiceSet } from "../api/choice";
 import { describeError } from "../utils/errors";
 import { useChoice } from "../hooks/useChoice";
@@ -27,17 +28,25 @@ watch(
 function closeEditor() {
   if (view.value === "overview") void router.replace({ path: "/choice/sets" });
 }
-async function remove(id: number) {
+async function remove(ids: number[]) {
+  if (!ids.length || busy.value || state.busy || changingId.value || transferBusy.value) return;
   busy.value = true;
   error.value = "";
+  let deleted = 0;
+  let failure = "";
   try {
-    await deleteSet(id);
-    selectedKeys.value = selectedKeys.value.filter(key => Number(key) !== id);
-    if (state.current?.set.id === id) reset();
-    await load();
+    for (const id of [...new Set(ids)]) {
+      await deleteSet(id);
+      deleted++;
+      selectedKeys.value = selectedKeys.value.filter(key => Number(key) !== id);
+      if (state.current?.set.id === id) reset();
+    }
+    Message.success(`已删除${deleted}个题集`);
   } catch (e) {
-    error.value = describeError(e);
+    failure = `已删除${deleted}个题集，操作已停止：${describeError(e)}。未完成项仍保留勾选，请刷新核对后重试。`;
   } finally {
+    await load();
+    if (failure) error.value = failure + (error.value ? ` ${error.value}` : "");
     busy.value = false;
   }
 }
@@ -98,6 +107,16 @@ onMounted(load);
             @busy="transferBusy = $event"
             @imported="load"
           />
+          <a-popconfirm
+            :content="`确认删除勾选的${selectedKeys.length}个题集？历史版本和答卷保留。`"
+            :disabled="!selectedKeys.length || busy || state.busy || !!changingId || transferBusy"
+            @ok="remove(selectedKeys.map(Number))"
+          >
+            <a-button
+              status="danger"
+              :disabled="!selectedKeys.length || busy || state.busy || !!changingId || transferBusy"
+            >删除</a-button>
+          </a-popconfirm>
           <a-typography-text v-if="selectedKeys.length" type="secondary"
             >已勾选 {{ selectedKeys.length }} 个题集</a-typography-text
           >
@@ -208,7 +227,7 @@ onMounted(load);
                 @click="openSet(record.id, 'library')"
                 >{{ state.current?.set.id === record.id ? "已选" : "选择" }}</a-button
               >
-              <a-popconfirm content="删除后题集将从列表移除，历史版本和答卷保留。确认删除？" @ok="remove(record.id)">
+              <a-popconfirm content="删除后题集将从列表移除，历史版本和答卷保留。确认删除？" @ok="remove([record.id])">
                 <a-button size="small" status="danger" :disabled="busy || state.busy || !!changingId || transferBusy"
                   >删除</a-button
                 >
