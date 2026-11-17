@@ -103,7 +103,7 @@ function move(i: number, delta: number) {
   <a-space direction="vertical" fill :size="16">
     <s-layout-tools v-if="!visible || $slots.actions || $slots.navigation">
       <template #left>
-        <a-space wrap>
+        <a-space wrap align="center">
           <a-button v-if="!visible && question" type="primary" :disabled="question.options.length >= 28" @click="edit()">
             <template #icon><icon-plus /></template>新增选项
           </a-button>
@@ -112,10 +112,12 @@ function move(i: number, delta: number) {
       </template>
       <template #right><slot name="actions" /></template>
     </s-layout-tools>
-    <a-space v-if="question && !visible" wrap>
-      <a-tag>{{ question.code }}</a-tag>
-      <a-typography-text>{{ question.title }}</a-typography-text>
-    </a-space>
+    <a-row v-if="question && !visible" justify="center">
+      <a-space wrap align="center">
+        <a-tag>{{ question.code }}</a-tag>
+        <a-typography-text>{{ question.title }}</a-typography-text>
+      </a-space>
+    </a-row>
     <a-alert v-if="!question" type="warning">未找到当前题目，请从题目列表的“选项管理”进入。</a-alert>
     <template v-else>
       <a-table v-if="!visible" :data="question.options" v-bind="pages.bindings" :bordered="{ wrapper: true, cell: true }"

@@ -24,19 +24,18 @@ const questionIndex = computed(() => state.draft?.questions.findIndex(q => q.cod
       @editing="editingOption = $event"
       >
       <template #navigation>
-        <a-space wrap>
+        <a-space wrap align="center" style="display: flex">
           <a-button
             :disabled="editingOption || questionIndex === 0"
             @click="openOptions(state.draft.questions[questionIndex - 1].code)"
             >上一题</a-button
           >
-          <a-typography-text>{{ questionIndex + 1 }} / {{ state.draft.questions.length }}</a-typography-text>
+          <span>{{ questionIndex + 1 }} / {{ state.draft.questions.length }}</span>
           <a-button
             :disabled="editingOption || questionIndex === state.draft.questions.length - 1"
             @click="openOptions(state.draft.questions[questionIndex + 1].code)"
             >下一题</a-button
           >
-          <a-button :disabled="editingOption" @click="navigate('questions')">返回题目管理</a-button>
           <a-typography-text v-if="editingOption" type="secondary">确认或取消当前选项后可切换题目。</a-typography-text>
         </a-space>
       </template>
