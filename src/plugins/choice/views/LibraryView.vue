@@ -4,6 +4,7 @@ import { deleteSet, setEnabled, listSets, type ChoiceSet } from "../api/choice";
 import { describeError, useChoice } from "../workspace/context";
 import { useRouter } from "vue-router";
 import SetEditor from "../components/SetEditor.vue";
+import WorkspaceActions from "../components/WorkspaceActions.vue";
 const { openSet, state, route, view, reset } = useChoice();
 const router = useRouter();
 const editor = ref<InstanceType<typeof SetEditor>>();
@@ -79,11 +80,17 @@ onMounted(load);
 </script>
 <template>
   <a-space direction="vertical" fill :size="16">
-    <a-space wrap
-      ><a-button type="primary" :disabled="state.busy || !!changingId" @click="editor?.open()"
-        ><template #icon><icon-plus /></template>新建题集</a-button
-      ><a-button :loading="busy" :disabled="!!changingId" @click="load">刷新</a-button></a-space
-    >
+    <s-layout-tools>
+      <template #left>
+        <a-space wrap>
+          <a-button type="primary" :disabled="state.busy || !!changingId" @click="editor?.open()"
+            ><template #icon><icon-plus /></template>新建题集</a-button
+          >
+          <a-button :loading="busy" :disabled="!!changingId" @click="load">刷新</a-button>
+        </a-space>
+      </template>
+      <template #right><WorkspaceActions /></template>
+    </s-layout-tools>
     <a-alert v-if="error" type="error">{{ error }}</a-alert>
     <a-table
       :data="sets"
@@ -169,7 +176,7 @@ onMounted(load);
                 type="primary"
                 :disabled="state.busy || state.current?.set.id === record.id"
                 @click="openSet(record.id, 'library')"
-                >{{ state.current?.set.id === record.id ? "已选择" : "选择" }}</a-button
+                >{{ state.current?.set.id === record.id ? "已选" : "选择" }}</a-button
               >
               <a-popconfirm content="删除后题集将从列表移除，历史版本和答卷保留。确认删除？" @ok="remove(record.id)">
                 <a-button size="small" status="danger" :disabled="busy || state.busy || !!changingId">删除</a-button>
