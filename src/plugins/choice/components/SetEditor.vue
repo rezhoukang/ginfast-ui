@@ -6,7 +6,6 @@ import { getSet, saveSet, type Definition, type Detail } from "../api/choice";
 import { blankDefinition } from "../utils/definition";
 import { describeError } from "../utils/errors";
 import { useChoice } from "../hooks/useChoice";
-import DefinitionTransfer from "./DefinitionTransfer.vue";
 const { state, dirty, save, acceptSaved } = useChoice();
 const emit = defineEmits<{ saved: [detail: Detail]; closed: [] }>();
 const owner = Symbol("set-editor");
@@ -18,8 +17,6 @@ const error = ref("");
 const detail = ref<Detail>();
 const form = ref<Definition>(blankDefinition());
 const baseline = ref("");
-const jsonDirty = ref(false);
-const transfer = ref<InstanceType<typeof DefinitionTransfer>>();
 let request = 0;
 function release() {
   if (state.editorOwner === owner) {
@@ -29,12 +26,12 @@ function release() {
   }
 }
 watch(
-  [visible, form, jsonDirty],
+  [visible, form],
   () => {
     if (visible.value) {
       state.editorOwner = owner;
       state.editorOpen = true;
-      state.editorDirty = jsonDirty.value || JSON.stringify(form.value) !== baseline.value;
+      state.editorDirty = JSON.stringify(form.value) !== baseline.value;
     } else release();
   },
   { deep: true, flush: "sync" }
@@ -52,7 +49,6 @@ async function open(id?: number) {
   detail.value = undefined;
   form.value = blankDefinition();
   baseline.value = JSON.stringify(form.value);
-  jsonDirty.value = false;
   loading.value = !!id;
   loadFailed.value = false;
   visible.value = true;
@@ -74,7 +70,6 @@ async function open(id?: number) {
 }
 async function confirm() {
   if (loading.value || saving.value || loadFailed.value) return false;
-  if (transfer.value && !transfer.value.prepare()) return false;
   if (!form.value.name.trim()) {
     error.value = "请填写题集名称";
     return false;
@@ -126,10 +121,6 @@ defineExpose({ open });
             ><a-textarea v-model="form.description" :max-length="4000" :auto-size="{ minRows: 3, maxRows: 6 }"
           /></a-form-item>
         </a-form>
-        <a-collapse :bordered="false"
-          ><a-collapse-item header="高级操作" key="advanced">
-            <DefinitionTransfer ref="transfer" v-model="form" @dirty="jsonDirty = $event" /> </a-collapse-item
-        ></a-collapse>
       </a-space>
     </a-spin>
   </a-modal>

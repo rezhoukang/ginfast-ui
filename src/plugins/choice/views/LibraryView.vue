@@ -5,11 +5,14 @@ import { describeError } from "../utils/errors";
 import { useChoice } from "../hooks/useChoice";
 import { useRouter } from "vue-router";
 import SetEditor from "../components/SetEditor.vue";
+import SetTransfer from "../components/SetTransfer.vue";
 import WorkspaceActions from "../components/WorkspaceActions.vue";
 const { openSet, state, route, view, reset } = useChoice();
 const router = useRouter();
 const editor = ref<InstanceType<typeof SetEditor>>();
 const handledPath = ref("");
+const selectedKeys = ref<(string | number)[]>([]);
+const transferBusy = ref(false);
 watch(
   () => [route.fullPath, state.busy, editor.value] as const,
   async () => {
@@ -29,6 +32,7 @@ async function remove(id: number) {
   error.value = "";
   try {
     await deleteSet(id);
+    selectedKeys.value = selectedKeys.value.filter(key => Number(key) !== id);
     if (state.current?.set.id === id) reset();
     await load();
   } catch (e) {
@@ -84,10 +88,20 @@ onMounted(load);
     <s-layout-tools>
       <template #left>
         <a-space wrap>
-          <a-button type="primary" :disabled="state.busy || !!changingId" @click="editor?.open()"
+          <a-button type="primary" :disabled="state.busy || busy || !!changingId || transferBusy" @click="editor?.open()"
             ><template #icon><icon-plus /></template>新建题集</a-button
           >
-          <a-button :loading="busy" :disabled="!!changingId" @click="load">刷新</a-button>
+          <a-button :loading="busy" :disabled="!!changingId || transferBusy" @click="load">刷新</a-button>
+          <SetTransfer
+            :selected-ids="selectedKeys.map(Number)"
+            :disabled="state.busy || busy || !!changingId"
+            @busy="transferBusy = $event"
+            @imported="load"
+          />
+          <a-typography-text v-if="selectedKeys.length" type="secondary"
+            >已勾选 {{ selectedKeys.length }} 个题集</a-typography-text
+          >
+          <a-button v-if="selectedKeys.length" type="text" :disabled="transferBusy" @click="selectedKeys = []">清空勾选</a-button>
         </a-space>
       </template>
       <template #right><WorkspaceActions /></template>
@@ -95,8 +109,19 @@ onMounted(load);
     <a-alert v-if="error" type="error">{{ error }}</a-alert>
     <a-table
       :data="sets"
+      row-key="id"
+      v-model:selected-keys="selectedKeys"
+      :row-selection="{ type: 'checkbox', showCheckedAll: true, onlyCurrent: false }"
       :loading="busy"
-      :pagination="{ current: page, total, pageSize, showTotal: true, showPageSize: true, pageSizeOptions: [10, 20, 50], showJumper: true }"
+      :pagination="{
+        current: page,
+        total,
+        pageSize,
+        showTotal: true,
+        showPageSize: true,
+        pageSizeOptions: [10, 20, 50],
+        showJumper: true
+      }"
       :bordered="{ wrapper: true, cell: true }"
       @page-size-change="
         pageSize = $event;
@@ -155,7 +180,7 @@ onMounted(load);
               type="round"
               :model-value="record.enabled"
               :loading="changingId === record.id"
-              :disabled="busy || state.busy || !!changingId"
+              :disabled="busy || state.busy || !!changingId || transferBusy"
               :aria-label="`${record.name}启用状态`"
               checked-text="启用"
               unchecked-text="停用"
@@ -171,16 +196,22 @@ onMounted(load);
           :width="260"
           ><template #cell="{ record }"
             ><a-space wrap
-              ><a-button size="small" :disabled="state.busy || !!changingId" @click="editor?.open(record.id)">编辑</a-button
+              ><a-button
+                size="small"
+                :disabled="state.busy || busy || !!changingId || transferBusy"
+                @click="editor?.open(record.id)"
+                >编辑</a-button
               ><a-button
                 size="small"
                 type="primary"
-                :disabled="state.busy || state.current?.set.id === record.id"
+                :disabled="state.busy || transferBusy || state.current?.set.id === record.id"
                 @click="openSet(record.id, 'library')"
                 >{{ state.current?.set.id === record.id ? "已选" : "选择" }}</a-button
               >
               <a-popconfirm content="删除后题集将从列表移除，历史版本和答卷保留。确认删除？" @ok="remove(record.id)">
-                <a-button size="small" status="danger" :disabled="busy || state.busy || !!changingId">删除</a-button>
+                <a-button size="small" status="danger" :disabled="busy || state.busy || !!changingId || transferBusy"
+                  >删除</a-button
+                >
               </a-popconfirm></a-space
             ></template
           ></a-table-column
