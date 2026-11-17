@@ -107,7 +107,7 @@ async function exportSets() {
     <input ref="fileInput" type="file" accept=".json,application/json" hidden @change="readFile" />
     <a-button :disabled="disabled || exporting || importing" @click="fileInput?.click()">导入</a-button>
     <a-button :loading="exporting" :disabled="disabled || importing || !selectedIds.length" @click="exportSets">
-      导出<span v-if="selectedIds.length">（{{ selectedIds.length }}）</span>
+      导出
     </a-button>
   </a-space>
   <a-modal
