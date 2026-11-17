@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useChoicePagination } from "../workspace/pagination";
 import { choiceModalLayout } from "../workspace/modal";
 import { ref, watch } from "vue";
 import { Message } from "@arco-design/web-vue";
@@ -9,12 +10,16 @@ const props = defineProps<{ dimensions: Variable[]; focusCode?: string; focusReq
 const visible = ref(false);
 const index = ref(-1);
 const form = ref<Rule>({ group: "result", code: "", name: "", description: "", mode: "all", conditions: [] });
+const pages = useChoicePagination(() => rules.value.length);
+const detailPages = useChoicePagination(() => form.value.conditions.length, 5);
 function edit(i = -1) {
   index.value = i;
+  if (i >= 0) pages.reveal(i);
   form.value =
     i < 0
       ? { group: "result", code: `R${rules.value.length + 1}`, name: "", description: "", mode: "all", conditions: [] }
       : JSON.parse(JSON.stringify(rules.value[i]));
+  detailPages.reset();
   visible.value = true;
 }
 watch(
@@ -50,6 +55,7 @@ function expression(rule: Rule) {
 }
 function move(i: number, delta: number) {
   [rules.value[i], rules.value[i + delta]] = [rules.value[i + delta], rules.value[i]];
+  pages.reveal(i + delta);
 }
 </script>
 <template>
@@ -64,7 +70,7 @@ function move(i: number, delta: number) {
       >
       <template #right><slot name="actions" /></template>
     </s-layout-tools>
-    <a-table :data="rules" :pagination="false" :bordered="{ wrapper: true, cell: true }"
+    <a-table :data="rules" v-bind="pages.bindings" :bordered="{ wrapper: true, cell: true }"
       ><template #columns>
         <a-table-column
           align="center"
@@ -72,7 +78,7 @@ function move(i: number, delta: number) {
           :header-cell-style="{ textAlign: 'center' }"
           title="顺序"
           :width="70"
-          ><template #cell="{ rowIndex }">{{ rowIndex + 1 }}</template></a-table-column
+          ><template #cell="{ rowIndex }">{{ pages.index(rowIndex) + 1 }}</template></a-table-column
         ><a-table-column
           align="center"
           header-cell-class="choice-table-header"
@@ -107,10 +113,10 @@ function move(i: number, delta: number) {
           :width="280"
           ><template #cell="{ rowIndex }"
             ><a-space
-              ><a-button size="small" @click="edit(rowIndex)">编辑</a-button
-              ><a-button size="small" :disabled="rowIndex === 0" @click="move(rowIndex, -1)">上移</a-button
-              ><a-button size="small" :disabled="rowIndex === rules.length - 1" @click="move(rowIndex, 1)">下移</a-button
-              ><a-popconfirm content="移除此规则？" @ok="rules.splice(rowIndex, 1)"
+              ><a-button size="small" @click="edit(pages.index(rowIndex))">编辑</a-button
+              ><a-button size="small" :disabled="pages.index(rowIndex) === 0" @click="move(pages.index(rowIndex), -1)">上移</a-button
+              ><a-button size="small" :disabled="pages.index(rowIndex) === rules.length - 1" @click="move(pages.index(rowIndex), 1)">下移</a-button
+              ><a-popconfirm content="移除此规则？" @ok="rules.splice(pages.index(rowIndex), 1)"
                 ><a-button size="small" status="danger">删除</a-button></a-popconfirm
               ></a-space
             ></template
@@ -138,7 +144,7 @@ function move(i: number, delta: number) {
         >
         <a-form-item label="条件"
           ><a-space direction="vertical" fill
-            ><a-table :data="form.conditions" :pagination="false"
+            ><a-table :data="form.conditions" v-bind="detailPages.bindings"
               ><template #columns>
                 <a-table-column
                   align="center"
@@ -196,7 +202,7 @@ function move(i: number, delta: number) {
                   title="操作"
                   :width="80"
                   ><template #cell="{ rowIndex }"
-                    ><a-button size="small" status="danger" @click="form.conditions.splice(rowIndex, 1)">移除</a-button></template
+                    ><a-button size="small" status="danger" @click="form.conditions.splice(detailPages.index(rowIndex), 1)">移除</a-button></template
                   ></a-table-column
                 >
               </template></a-table

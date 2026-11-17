@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useChoicePagination } from "../workspace/pagination";
 import { normalizeEffect, validEffect, effectText } from "../workspace/effects";
 import { computed, ref, watch, onBeforeUnmount } from "vue";
 import { Message } from "@arco-design/web-vue";
@@ -15,6 +16,9 @@ const visible = ref(false);
 watch(visible, value => emit("editing", value));
 const index = ref(-1);
 const form = ref<Option>({ code: "", text: "", effects: [] });
+const pages = useChoicePagination(() => question.value?.options.length || 0);
+const detailPages = useChoicePagination(() => form.value.effects.length, 5);
+watch(() => question.value?.code, () => pages.reset());
 watch(
   [visible, form],
   () => {
@@ -44,11 +48,13 @@ const availableCodes = computed(() =>
 function edit(i = -1) {
   if (!question.value) return;
   index.value = i;
+  if (i >= 0) pages.reveal(i);
   const code = codes.find(c => !question.value!.options.some(o => o.code === c));
   if (i < 0 && !code) return;
   form.value = i < 0 ? { code: code!, text: "", effects: [] } : JSON.parse(JSON.stringify(question.value.options[i]));
   form.value.effects = form.value.effects.map(normalizeEffect);
   baseline.value = JSON.stringify(form.value);
+  detailPages.reset();
   visible.value = true;
 }
 watch(
@@ -90,6 +96,7 @@ function move(i: number, delta: number) {
   if (!question.value) return;
   const options = question.value.options;
   [options[i], options[i + delta]] = [options[i + delta], options[i]];
+  pages.reveal(i + delta);
 }
 </script>
 <template>
@@ -110,7 +117,7 @@ function move(i: number, delta: number) {
     </s-layout-tools>
     <a-alert v-if="!question" type="warning">未找到当前题目，请从题目列表的“选项管理”进入。</a-alert>
     <template v-else>
-      <a-table v-if="!visible" :data="question.options" :pagination="false" :bordered="{ wrapper: true, cell: true }"
+      <a-table v-if="!visible" :data="question.options" v-bind="pages.bindings" :bordered="{ wrapper: true, cell: true }"
         ><template #columns>
           <a-table-column
             align="center"
@@ -147,11 +154,11 @@ function move(i: number, delta: number) {
             :width="280"
             ><template #cell="{ rowIndex }"
               ><a-space
-                ><a-button size="small" @click="edit(rowIndex)">编辑</a-button
-                ><a-button size="small" :disabled="rowIndex === 0" @click="move(rowIndex, -1)">上移</a-button
-                ><a-button size="small" :disabled="rowIndex === question.options.length - 1" @click="move(rowIndex, 1)"
+                ><a-button size="small" @click="edit(pages.index(rowIndex))">编辑</a-button
+                ><a-button size="small" :disabled="pages.index(rowIndex) === 0" @click="move(pages.index(rowIndex), -1)">上移</a-button
+                ><a-button size="small" :disabled="pages.index(rowIndex) === question.options.length - 1" @click="move(pages.index(rowIndex), 1)"
                   >下移</a-button
-                ><a-popconfirm content="移除此选项？" @ok="question.options.splice(rowIndex, 1)"
+                ><a-popconfirm content="移除此选项？" @ok="question.options.splice(pages.index(rowIndex), 1)"
                   ><a-button size="small" status="danger" :disabled="question.options.length <= 2">删除</a-button></a-popconfirm
                 ></a-space
               ></template
@@ -170,7 +177,7 @@ function move(i: number, delta: number) {
           <a-form-item label="选项内容" required><a-textarea v-model="form.text" :max-length="2000" /></a-form-item>
           <a-form-item label="变量操作"
             ><a-space direction="vertical" fill
-              ><a-table :data="form.effects" :pagination="false"
+              ><a-table :data="form.effects" v-bind="detailPages.bindings"
                 ><template #columns>
                   <a-table-column
                     align="center"
@@ -219,7 +226,7 @@ function move(i: number, delta: number) {
                     title="操作"
                     :width="80"
                     ><template #cell="{ rowIndex }"
-                      ><a-button size="small" status="danger" @click="form.effects.splice(rowIndex, 1)">移除</a-button></template
+                      ><a-button size="small" status="danger" @click="form.effects.splice(detailPages.index(rowIndex), 1)">移除</a-button></template
                     ></a-table-column
                   >
                 </template></a-table

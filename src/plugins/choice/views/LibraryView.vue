@@ -53,6 +53,7 @@ async function changeEnabled(record: ChoiceSet, enabled: boolean) {
 }
 const sets = ref<ChoiceSet[]>([]);
 const page = ref(1);
+const pageSize = ref(20);
 const total = ref(0);
 const busy = ref(false);
 const error = ref("");
@@ -60,7 +61,12 @@ async function load() {
   busy.value = true;
   error.value = "";
   try {
-    const data = await listSets(page.value);
+    let data = await listSets(page.value, pageSize.value);
+    const lastPage = Math.max(1, Math.ceil(data.total / pageSize.value));
+    if (page.value > lastPage) {
+      page.value = lastPage;
+      data = await listSets(page.value, pageSize.value);
+    }
     sets.value = data.list || [];
     total.value = data.total;
   } catch (e) {
@@ -82,8 +88,13 @@ onMounted(load);
     <a-table
       :data="sets"
       :loading="busy"
-      :pagination="{ current: page, total, pageSize: 20 }"
+      :pagination="{ current: page, total, pageSize, showTotal: true, showPageSize: true, pageSizeOptions: [10, 20, 50], showJumper: true }"
       :bordered="{ wrapper: true, cell: true }"
+      @page-size-change="
+        pageSize = $event;
+        page = 1;
+        load();
+      "
       @page-change="
         page = $event;
         load();

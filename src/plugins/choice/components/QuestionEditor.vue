@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useChoicePagination } from "../workspace/pagination";
 import { choiceModalLayout } from "../workspace/modal";
 import { ref } from "vue";
 import { Message } from "@arco-design/web-vue";
@@ -14,9 +15,11 @@ function afterClose() {
 }
 const index = ref(-1);
 const form = ref<Question>({ code: "", title: "", kind: "single", required: true, options: [] });
+const pages = useChoicePagination(() => questions.value.length);
 const kindNames = { single: "单选", multiple: "多选" };
 function edit(i = -1) {
   index.value = i;
+  if (i >= 0) pages.reveal(i);
   let code = questions.value.length + 1;
   while (questions.value.some(q => q.code === `Q${code}`)) code++;
   form.value =
@@ -51,6 +54,7 @@ function apply() {
 }
 function move(i: number, delta: number) {
   [questions.value[i], questions.value[i + delta]] = [questions.value[i + delta], questions.value[i]];
+  pages.reveal(i + delta);
 }
 </script>
 <template>
@@ -65,7 +69,7 @@ function move(i: number, delta: number) {
       >
       <template #right><slot name="actions" /></template>
     </s-layout-tools>
-    <a-table :data="questions" :pagination="false" :bordered="{ wrapper: true, cell: true }"
+    <a-table :data="questions" v-bind="pages.bindings" :bordered="{ wrapper: true, cell: true }"
       ><template #columns>
         <a-table-column
           align="center"
@@ -115,11 +119,11 @@ function move(i: number, delta: number) {
           :width="370"
           ><template #cell="{ rowIndex }"
             ><a-space
-              ><a-button size="small" @click="edit(rowIndex)">编辑</a-button
-              ><a-button size="small" @click="emit('options', questions[rowIndex].code)">选项管理</a-button
-              ><a-button size="small" :disabled="rowIndex === 0" @click="move(rowIndex, -1)">上移</a-button
-              ><a-button size="small" :disabled="rowIndex === questions.length - 1" @click="move(rowIndex, 1)">下移</a-button
-              ><a-popconfirm content="移除此题目？" @ok="questions.splice(rowIndex, 1)"
+              ><a-button size="small" @click="edit(pages.index(rowIndex))">编辑</a-button
+              ><a-button size="small" @click="emit('options', questions[pages.index(rowIndex)].code)">选项管理</a-button
+              ><a-button size="small" :disabled="pages.index(rowIndex) === 0" @click="move(pages.index(rowIndex), -1)">上移</a-button
+              ><a-button size="small" :disabled="pages.index(rowIndex) === questions.length - 1" @click="move(pages.index(rowIndex), 1)">下移</a-button
+              ><a-popconfirm content="移除此题目？" @ok="questions.splice(pages.index(rowIndex), 1)"
                 ><a-button size="small" status="danger">删除</a-button></a-popconfirm
               ></a-space
             ></template

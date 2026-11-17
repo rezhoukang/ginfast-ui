@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useChoicePagination } from "../workspace/pagination";
 import { choiceModalLayout } from "../workspace/modal";
 import { ref, watch } from "vue";
 import { Message } from "@arco-design/web-vue";
@@ -9,14 +10,18 @@ const dimensions = defineModel<Variable[]>({ required: true });
 const visible = ref(false);
 const index = ref(-1);
 const form = ref<Variable>({ code: "", name: "", initial: 0, terms: [] });
+const pages = useChoicePagination(() => dimensions.value.length);
+const detailPages = useChoicePagination(() => form.value.terms.length, 5);
 function edit(i = -1) {
   index.value = i;
+  if (i >= 0) pages.reveal(i);
   let code = dimensions.value.length + 1;
   while (dimensions.value.some(d => d.code === `D${code}`)) code++;
   form.value =
     i < 0
       ? { code: `D${code}`, name: "", initial: 0, terms: [] }
       : structuredClone(JSON.parse(JSON.stringify(dimensions.value[i])));
+  detailPages.reset();
   visible.value = true;
 }
 watch(
@@ -104,7 +109,7 @@ function remove(i: number) {
       >
       <template #right><slot name="actions" /></template>
     </s-layout-tools>
-    <a-table :data="dimensions" :pagination="false" :bordered="{ wrapper: true, cell: true }"
+    <a-table :data="dimensions" v-bind="pages.bindings" :bordered="{ wrapper: true, cell: true }"
       ><template #columns>
         <a-table-column
           align="center"
@@ -144,8 +149,8 @@ function remove(i: number) {
           :width="170"
           ><template #cell="{ rowIndex }"
             ><a-space
-              ><a-button size="small" @click="edit(rowIndex)">编辑</a-button
-              ><a-popconfirm content="确认删除此变量？已被引用的变量会保留。" @ok="remove(rowIndex)"
+              ><a-button size="small" @click="edit(pages.index(rowIndex))">编辑</a-button
+              ><a-popconfirm content="确认删除此变量？已被引用的变量会保留。" @ok="remove(pages.index(rowIndex))"
                 ><a-button size="small" status="danger">删除</a-button></a-popconfirm
               ></a-space
             ></template
@@ -171,7 +176,7 @@ function remove(i: number) {
         <a-form-item label="派生计算"
           ><a-space direction="vertical" fill
             ><a-alert>不添加计算项时为基础变量；添加后按“常数项 + 基础变量 × 系数”计算。</a-alert>
-            <a-table :data="form.terms" :pagination="false"
+            <a-table :data="form.terms" v-bind="detailPages.bindings"
               ><template #columns
                 ><a-table-column
                   align="center"
@@ -201,7 +206,7 @@ function remove(i: number) {
                   title="操作"
                   :width="80"
                   ><template #cell="{ rowIndex }"
-                    ><a-button status="danger" size="small" @click="form.terms.splice(rowIndex, 1)">移除</a-button></template
+                    ><a-button status="danger" size="small" @click="form.terms.splice(detailPages.index(rowIndex), 1)">移除</a-button></template
                   ></a-table-column
                 ></template
               ></a-table

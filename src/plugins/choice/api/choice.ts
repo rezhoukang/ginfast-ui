@@ -93,8 +93,8 @@ async function request<T>(
   if (res.code !== 0) throw new Error(res.message || "操作失败");
   return res.data;
 }
-export const listSets = (pageNum: number) =>
-  request<{ list: ChoiceSet[]; total: number }>("get", "/sets", undefined, { pageNum, pageSize: 20 });
+export const listSets = (pageNum: number, pageSize = 20) =>
+  request<{ list: ChoiceSet[]; total: number }>("get", "/sets", undefined, { pageNum, pageSize });
 export const getSet = (id: number) => request<Detail>("get", `/sets/${id}`);
 export const saveSet = (id: number | undefined, expectedVersionId: number, definition: Definition) =>
   request<Detail>(id ? "put" : "post", id ? `/sets/${id}` : "/sets", { expectedVersionId, definition });

@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { useChoicePagination } from "../workspace/pagination";
 import type { Variable, Result } from "../api/choice";
 const props = defineProps<{ result: Result; attemptId?: number; dimensions?: Variable[] }>();
+const pages = useChoicePagination(() => props.result.matches.length);
 const label = (code: string) => props.dimensions?.find(d => d.code === code)?.name || code;
 </script>
 <template>
@@ -9,7 +11,7 @@ const label = (code: string) => props.dimensions?.find(d => d.code === code)?.na
     <a-descriptions v-if="attemptId" :column="2" bordered>
       <a-descriptions-item label="答卷编号">{{ attemptId }}</a-descriptions-item>
     </a-descriptions>
-    <a-table v-if="result.matches.length" :data="result.matches" :pagination="false" :bordered="{ cell: true }"
+    <a-table v-if="result.matches.length" :data="result.matches" v-bind="pages.bindings" :bordered="{ cell: true }"
       ><template #columns
         ><a-table-column
           align="center"
