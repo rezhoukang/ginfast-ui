@@ -14,10 +14,15 @@ const views = {
   take: defineAsyncComponent(() => import("./TakeView.vue"))
 };
 const editing = computed(() => !["library", "overview", "history", "take"].includes(view.value));
+const noSelection = computed(() => editing.value && !state.draft && !state.busy && !state.error);
 </script>
 <template>
-  <div class="snow-page">
-    <div class="snow-inner">
+  <div class="snow-page" :class="{ 'choice-empty-page': noSelection }">
+    <a-space v-if="noSelection" direction="vertical" align="center" :size="16">
+      <a-typography-text type="secondary">暂未选择题集</a-typography-text>
+      <a-button type="primary" @click="navigate('library')">前往题集管理</a-button>
+    </a-space>
+    <div v-else class="snow-inner">
       <a-spin :loading="state.busy" style="width: 100%">
         <a-space direction="vertical" fill :size="16">
           <a-alert v-if="editing && state.showIssues && issues.length" type="warning">
@@ -37,6 +42,14 @@ const editing = computed(() => !["library", "overview", "history", "take"].inclu
     </div>
   </div>
 </template>
+
+<style scoped>
+.choice-empty-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+</style>
 
 <style>
 /* GinFast's theme makes header cells flex containers, including teleported dialogs. */
