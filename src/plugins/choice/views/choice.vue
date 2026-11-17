@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from "vue";
 import { provideChoice } from "../workspace/context";
-import { viewTitles } from "../workspace/navigation";
-const { state, issues, fixIssue, view, save } = provideChoice();
+const { state, issues, fixIssue, view, save, navigate } = provideChoice();
 const views = {
   library: defineAsyncComponent(() => import("./LibraryView.vue")),
   overview: defineAsyncComponent(() => import("./LibraryView.vue")),
@@ -32,9 +31,7 @@ const editing = computed(() => !["library", "overview", "history", "take"].inclu
             <a-button v-if="state.saveFailed" size="small" :loading="state.busy" @click="save">重试保存</a-button>
           </a-alert>
           <component :is="views[view]" v-if="!editing || state.draft" :key="view + state.loadedKey" />
-          <template v-else-if="!state.busy"
-            ><a-alert>请先选择题集，再配置{{ viewTitles[view] }}。</a-alert><component :is="views.library"
-          /></template>
+          <a-button v-else-if="!state.busy" type="primary" @click="navigate('library')">前往题集管理</a-button>
         </a-space>
       </a-spin>
     </div>
