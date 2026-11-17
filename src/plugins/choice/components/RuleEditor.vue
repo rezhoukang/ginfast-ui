@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { choiceModalLayout } from "../workspace/modal";
 import { ref, watch } from "vue";
 import { Message } from "@arco-design/web-vue";
 import { validCode } from "../workspace/readiness";
@@ -118,6 +119,7 @@ function move(i: number, delta: number) {
       </template></a-table
     >
     <a-modal
+      v-bind="choiceModalLayout"
       v-model:visible="visible"
       :title="index < 0 ? '新增结论' : '编辑结论'"
       width="min(960px,94vw)"

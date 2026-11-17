@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { choiceModalLayout } from "../workspace/modal";
 import { ref, watch } from "vue";
 import { Message } from "@arco-design/web-vue";
 import { validCode } from "../workspace/readiness";
@@ -153,6 +154,7 @@ function remove(i: number) {
       </template></a-table
     >
     <a-modal
+      v-bind="choiceModalLayout"
       v-model:visible="visible"
       :title="index < 0 ? '新增变量' : '编辑变量'"
       width="min(760px,94vw)"

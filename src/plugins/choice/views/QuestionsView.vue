@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { choiceModalLayout } from "../workspace/modal";
 import WorkspaceActions from "../components/WorkspaceActions.vue";
 import { ref } from "vue";
 import { useChoice } from "../workspace/context";
@@ -30,6 +31,7 @@ function applyOptions() {
     ><template #actions><WorkspaceActions /></template
   ></QuestionEditor>
   <a-modal
+    v-bind="choiceModalLayout"
     v-model:visible="visible"
     title="选项管理"
     width="min(1120px,94vw)"

@@ -3,6 +3,7 @@ import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from "vu
 import { Message, Modal } from "@arco-design/web-vue";
 import { isAxiosError } from "axios";
 import { getSet, saveSet, publishSet, type Definition, type Detail } from "../api/choice";
+import { choiceModalLayout } from "./modal";
 import { draftIssues, type DraftIssue } from "./readiness";
 import { queryText, resolveView, workspaceKey, isChoicePath, viewPath, type ChoiceView } from "./navigation";
 
@@ -70,6 +71,7 @@ function createWorkspace() {
     if (!state.editorDirty && (localOnly || !dirty.value)) return true;
     return new Promise<boolean>(resolve =>
       Modal.confirm({
+        ...choiceModalLayout,
         title: localOnly ? "离开当前选项？" : "离开当前题集？",
         maskClosable: true,
         onClose: () => resolve(false),

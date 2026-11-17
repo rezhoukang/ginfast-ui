@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { choiceModalLayout } from "../workspace/modal";
 import { onBeforeUnmount, ref, watch } from "vue";
 import { Message } from "@arco-design/web-vue";
 import { getSet, saveSet, type Definition, type Detail } from "../api/choice";
@@ -100,6 +101,7 @@ defineExpose({ open });
 </script>
 <template>
   <a-modal
+    v-bind="choiceModalLayout"
     v-model:visible="visible"
     :title="detail ? '编辑题集' : '新建题集'"
     width="min(800px,94vw)"
